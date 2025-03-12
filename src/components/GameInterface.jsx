@@ -242,12 +242,12 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         throw new Error('Only pending games can be canceled');
       }
       
-      // Instead of deleting, update the game status to 'cancelled'
-      // This is more reliable than deletion with potential RLS policies
+      // Mark the game as 'completed' instead of 'cancelled' to comply with DB constraints
+      // The status check constraint only allows 'pending', 'active', 'completed'
       const { error: updateError } = await supabase
         .from('games')
         .update({
-          status: 'cancelled',
+          status: 'completed',
           completed_at: new Date().toISOString()
         })
         .eq('id', gameId);
@@ -257,22 +257,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         throw updateError;
       }
       
-      // As a backup, also try to delete the game
-      // Even if this fails, the status update above will ensure it doesn't show up
-      try {
-        const { error: deleteError } = await supabase
-          .from('games')
-          .delete()
-          .eq('id', gameId);
-          
-        if (deleteError) {
-          console.warn('Could not delete game, but it was marked as cancelled:', deleteError);
-          // Continue execution since we already updated the status
-        }
-      } catch (deleteErr) {
-        console.warn('Delete operation failed but game was marked cancelled:', deleteErr);
-        // Continue execution since we already updated the status
-      }
+      // No need to try deletion as the status update will ensure it doesn't show in the active games list
       
       // Refund wager to user balance
       await supabase.rpc('update_balance', {
