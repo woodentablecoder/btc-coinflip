@@ -216,6 +216,59 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
     }
   };
 
+  const cancelGame = async (gameId) => {
+    if (!user) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get the game
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+        
+      if (gameError) throw gameError;
+      
+      // Verify this is the creator's game
+      if (game.player1_id !== user.id) {
+        throw new Error('You can only cancel games you created');
+      }
+      
+      // Verify game is still in pending status
+      if (game.status !== 'pending') {
+        throw new Error('Only pending games can be canceled');
+      }
+      
+      // Delete the game
+      const { error: deleteError } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+        
+      if (deleteError) throw deleteError;
+      
+      // Refund wager to user balance
+      await supabase.rpc('update_balance', {
+        user_id: user.id,
+        amount: game.wager_amount
+      });
+      
+      // Immediately update the UI by removing the cancelled game from the local state
+      setGames(games.filter(g => g.id !== gameId));
+      
+      console.log('Game canceled successfully:', gameId);
+      
+    } catch (err) {
+      console.error('Cancel game error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const executeCoinflip = async (game) => {
     try {
       // Simple 50/50 random for frontend demonstration
@@ -287,6 +340,15 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
     alignItems: 'center',
     backgroundColor: 'white',
     marginBottom: '16px'
+  };
+
+  const cancelButtonStyle = {
+    padding: '8px 16px',
+    backgroundColor: '#ef4444',
+    color: 'white',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginLeft: '8px'
   };
 
   // Add a new function to handle user record repair
@@ -460,16 +522,31 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                       Created {new Date(game.created_at).toLocaleTimeString()}
                     </span>
                   </div>
-                  <button
-                    onClick={() => joinGame(game.id)}
-                    disabled={loading || game.player1_id === user?.id}
-                    style={{
-                      ...joinButtonStyle,
-                      opacity: loading || game.player1_id === user?.id ? 0.5 : 1
-                    }}
-                  >
-                    {game.player1_id === user?.id ? 'Your Game' : 'Join Game'}
-                  </button>
+                  <div>
+                    {game.player1_id === user?.id ? (
+                      <button
+                        onClick={() => cancelGame(game.id)}
+                        disabled={loading}
+                        style={{
+                          ...cancelButtonStyle,
+                          opacity: loading ? 0.5 : 1
+                        }}
+                      >
+                        Cancel Game
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => joinGame(game.id)}
+                        disabled={loading}
+                        style={{
+                          ...joinButtonStyle,
+                          opacity: loading ? 0.5 : 1
+                        }}
+                      >
+                        Join Game
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
