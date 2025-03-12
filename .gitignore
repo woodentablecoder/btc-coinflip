@@ -1,3 +1,15 @@
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# file paths
+/home/jack/projects/btc-coinflip/APPLY_SCHEMA_INSTRUCTIONS.md
+
 # Logs
 logs
 *.log
