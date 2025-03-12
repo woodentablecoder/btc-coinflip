@@ -1,40 +1,89 @@
-# Supabase
-.branches
-.temp
+# Dependency directories
+node_modules/
+vendor/
+jspm_packages/
+bower_components/
 
-# dotenvx
+# Build outputs
+dist/
+build/
+out/
+target/
+.next/
+.nuxt/
+.cache/
+public/dist/
+
+# Environment files
 .env
 .env.test
 .env.keys
 .env.local
 .env.*.local
 
-# file paths
+# File paths
 /home/jack/projects/btc-coinflip/APPLY_SCHEMA_INSTRUCTIONS.md
 APPLY_SCHEMA_INSTRUCTIONS.md
 plan.txt
 
-# Logs
-logs
-*.log
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+logs
+*.log
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# IDE and editor folders
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+.project
+.classpath
+.settings/
+
+# Testing
+coverage/
+.nyc_output/
+
+# System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.pyo
+__pycache__/
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Temp files
+tmp/
+temp/
+.tmp/
