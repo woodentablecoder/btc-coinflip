@@ -7,8 +7,8 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const MIN_WAGER = 100; // 100 satoshis
-  const MAX_WAGER = 100000000; // 1 BTC
+  const MIN_WAGER = 100; // ₿ 100 satoshis
+  const MAX_WAGER = 100000000; // ₿ 100 000 000 satoshis
 
   // Fetch active games
   useEffect(() => {
@@ -242,13 +242,37 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         throw new Error('Only pending games can be canceled');
       }
       
-      // Delete the game
-      const { error: deleteError } = await supabase
+      // Instead of deleting, update the game status to 'cancelled'
+      // This is more reliable than deletion with potential RLS policies
+      const { error: updateError } = await supabase
         .from('games')
-        .delete()
+        .update({
+          status: 'cancelled',
+          completed_at: new Date().toISOString()
+        })
         .eq('id', gameId);
         
-      if (deleteError) throw deleteError;
+      if (updateError) {
+        console.error('Failed to update game status:', updateError);
+        throw updateError;
+      }
+      
+      // As a backup, also try to delete the game
+      // Even if this fails, the status update above will ensure it doesn't show up
+      try {
+        const { error: deleteError } = await supabase
+          .from('games')
+          .delete()
+          .eq('id', gameId);
+          
+        if (deleteError) {
+          console.warn('Could not delete game, but it was marked as cancelled:', deleteError);
+          // Continue execution since we already updated the status
+        }
+      } catch (deleteErr) {
+        console.warn('Delete operation failed but game was marked cancelled:', deleteErr);
+        // Continue execution since we already updated the status
+      }
       
       // Refund wager to user balance
       await supabase.rpc('update_balance', {
