@@ -2,9 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font declaration for DepartureMonoNerdFont-Regular */
+@font-face {
+  font-family: "DepartureMonoNerdFont-Regular";
+  src: url("/fonts/DepartureMonoNerdFont-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Adding some base styles to ensure they appear */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "DepartureMonoNerdFont-Regular", monospace;
   line-height: 1.5;
 }
 

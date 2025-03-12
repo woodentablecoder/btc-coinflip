@@ -26,6 +26,7 @@ public/dist/
 APPLY_SCHEMA_INSTRUCTIONS.md
 plan.txt
 structure.txt
+/public/fonts
 
 # Debug logs
 npm-debug.log*

@@ -15,6 +15,11 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     await supabase.auth.signOut();
   };
 
+  // Base font style to apply throughout the navbar
+  const baseStyle = {
+    fontFamily: "'DepartureMonoNerdFont-Regular', monospace",
+  };
+
   return (
     <nav
       style={{
@@ -28,6 +33,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
         alignItems: "center",
         justifyContent: "space-between",
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        ...baseStyle,
       }}
     >
       {/* Left Section: Menu */}
@@ -39,6 +45,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
               padding: "8px 16px",
               fontWeight: "bold",
               cursor: "pointer",
+              ...baseStyle,
             }}
           >
             Coinflip
@@ -71,6 +78,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
             padding: "10px 16px",
             fontWeight: "bold",
             cursor: "pointer",
+            ...baseStyle,
           }}
         >
           <svg
@@ -89,9 +97,10 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
         <div
           style={{
             margin: "0px 30px",
-            fontSize: "20px",
-            fontWeight: "bold",
+            fontSize: "15px",
+            fontWeight: "400",
             color: "white",
+            ...baseStyle,
           }}
         >
           {formatBalance(balance || 0)}
@@ -103,6 +112,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
             display: "flex",
             alignItems: "center",
             cursor: "pointer",
+            ...baseStyle,
           }}
         >
           <div
