@@ -1,7 +1,22 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import supabase from "../supabase";
+import { isAdmin } from "../utils/adminUtils.jsx";
 
 const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const checkAdminStatus = async () => {
+        const adminStatus = await isAdmin();
+        setUserIsAdmin(adminStatus);
+      };
+
+      checkAdminStatus();
+    }
+  }, [user]);
+
   const formatBalance = (balanceInSatoshis) => {
     // Format the balance with space separators as per spec
     return `₿ ${
@@ -24,11 +39,13 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     <nav
       style={{
         position: "fixed",
+        top: 0,
+        left: 0,
         width: "100%",
         backgroundColor: "#1A1C24",
         color: "white",
         padding: "12px 24px 12px 24px",
-        zIndex: 10,
+        zIndex: 1000,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -40,17 +57,20 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     >
       {/* Left Section - Logo/Title */}
       <div style={{ display: "flex", alignItems: "center" }}>
-        <div
+        <a
+          href="/"
           style={{
             padding: "8px 8px 8px 0",
             fontWeight: "bold",
             cursor: "pointer",
             whiteSpace: "nowrap",
+            textDecoration: "none",
+            color: "inherit",
             ...baseStyle,
           }}
         >
           Coinflip
-        </div>
+        </a>
       </div>
 
       {/* Right Section - Always stay on one line */}
@@ -105,7 +125,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
           {formatBalance(balance || 0)}
         </div>
 
-        {/* User Profile - Fixed spacing */}
+        {/* User Profile - Just profile picture */}
         <div
           style={{
             display: "flex",
@@ -132,19 +152,25 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
           </div>
-          <span
+        </div>
+
+        {user && userIsAdmin && (
+          <Link
+            to="/admin"
             style={{
+              color: "white",
+              textDecoration: "none",
               marginLeft: "8px",
-              maxWidth: "80px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              display: "block",
+              fontWeight: "bold",
+              padding: "8px 16px",
+              backgroundColor: "#2563eb",
+              borderRadius: "4px",
+              ...baseStyle,
             }}
           >
-            {user ? user.email.split("@")[0] : "admin123"}
-          </span>
-        </div>
+            Admin
+          </Link>
+        )}
       </div>
     </nav>
   );

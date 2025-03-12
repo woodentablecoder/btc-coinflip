@@ -23,6 +23,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: #121317;
+  padding-top: 60px; /* Add padding to account for fixed navbar */
 }
 
 /* Basic button styles if Tailwind isn't loading */

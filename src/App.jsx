@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import supabase from "./supabase";
 import Header from "./components/Header";
 import Auth from "./components/Auth";
 import GameInterface from "./components/GameInterface";
+import AdminDashboard from "./components/AdminDashboard";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import CoinflipModal from "./components/modals/CoinflipModal";
 import DepositModal from "./components/modals/DepositModal";
 import WithdrawModal from "./components/modals/WithdrawModal";
@@ -288,56 +296,99 @@ function App() {
   }, [user, showCoinflipModal, currentGame, handleOpenCoinflipModal]);
 
   return (
-    <div
-      style={{
-        backgroundColor: "#121317",
-        minHeight: "100vh",
-        color: "#e2e8f0",
-      }}
-    >
-      <Header
-        user={user}
-        balance={balance}
-        onOpenDepositModal={() => setShowDepositModal(true)}
-        onOpenWithdrawModal={() => setShowWithdrawModal(true)}
-      />
+    <Router>
+      <div
+        style={{
+          backgroundColor: "#121317",
+          minHeight: "100vh",
+          color: "#e2e8f0",
+        }}
+      >
+        <Header
+          user={user}
+          balance={balance}
+          onOpenDepositModal={() => setShowDepositModal(true)}
+          onOpenWithdrawModal={() => setShowWithdrawModal(true)}
+        />
 
-      <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "16px" }}>
-        {!user ? (
-          <Auth />
-        ) : (
-          <GameInterface
-            user={user}
-            onGameComplete={handleGameComplete}
-            onOpenCoinflipModal={handleOpenCoinflipModal}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              !session ? (
+                <main
+                  style={{
+                    maxWidth: "1200px",
+                    margin: "0 auto",
+                    padding: "16px",
+                    paddingTop: "80px",
+                  }}
+                >
+                  <Auth />
+                </main>
+              ) : (
+                <main
+                  style={{
+                    maxWidth: "1200px",
+                    margin: "0 auto",
+                    padding: "16px",
+                    paddingTop: "80px",
+                  }}
+                >
+                  <GameInterface
+                    user={user}
+                    onGameComplete={handleGameComplete}
+                    onOpenCoinflipModal={handleOpenCoinflipModal}
+                  />
+                </main>
+              )
+            }
           />
-        )}
-      </main>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedAdminRoute>
+                <main
+                  style={{
+                    maxWidth: "1200px",
+                    margin: "0 auto",
+                    padding: "16px",
+                    paddingTop: "80px",
+                  }}
+                >
+                  <AdminDashboard />
+                </main>
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
 
-      {/* Modals */}
-      <CoinflipModal
-        isOpen={showCoinflipModal}
-        game={currentGame}
-        winner={gameWinner}
-        currentUserId={user?.id}
-        onClose={() => setShowCoinflipModal(false)}
-      />
+        {/* Modals */}
+        <CoinflipModal
+          isOpen={showCoinflipModal}
+          game={currentGame}
+          winner={gameWinner}
+          currentUserId={user?.id}
+          onClose={() => setShowCoinflipModal(false)}
+        />
 
-      <DepositModal
-        isOpen={showDepositModal}
-        userId={user?.id}
-        onClose={() => setShowDepositModal(false)}
-        onDeposit={handleDeposit}
-      />
+        <DepositModal
+          isOpen={showDepositModal}
+          userId={user?.id}
+          onClose={() => setShowDepositModal(false)}
+          onDeposit={handleDeposit}
+        />
 
-      <WithdrawModal
-        isOpen={showWithdrawModal}
-        userId={user?.id}
-        userBalance={balance}
-        onClose={() => setShowWithdrawModal(false)}
-        onWithdraw={handleWithdraw}
-      />
-    </div>
+        <WithdrawModal
+          isOpen={showWithdrawModal}
+          userId={user?.id}
+          userBalance={balance}
+          onClose={() => setShowWithdrawModal(false)}
+          onWithdraw={handleWithdraw}
+        />
+      </div>
+    </Router>
   );
 }
 

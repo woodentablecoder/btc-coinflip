@@ -7,15 +7,19 @@
     "dev": "vite",
     "dev:test": "vite --mode test",
     "setup-test": "node setup-test-env.js",
+    "setup-env": "node setup-env.js",
     "test-db": "node test-db-setup.js",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "apply-admin-role": "node apply-admin-role.js",
+    "apply-admin-role:test": "node apply-admin-role-test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
