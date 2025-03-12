@@ -27,42 +27,38 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
         width: "100%",
         backgroundColor: "#1A1C24",
         color: "white",
-        padding: "12px 24px",
+        padding: "12px 24px 12px 24px",
         zIndex: 10,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
+        boxSizing: "border-box",
         ...baseStyle,
       }}
     >
-      {/* Left Section: Menu */}
-      <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-        {/* Navigation Links */}
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              padding: "8px 16px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              ...baseStyle,
-            }}
-          >
-            Coinflip
-          </div>
+      {/* Left Section - Logo/Title */}
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <div
+          style={{
+            padding: "8px 8px 8px 0",
+            fontWeight: "bold",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            ...baseStyle,
+          }}
+        >
+          Coinflip
         </div>
       </div>
 
-      {/* Center Section - Empty to create space */}
-      <div style={{ flex: 1 }}></div>
-
-      {/* Right Section */}
+      {/* Right Section - Always stay on one line */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          flex: 1,
-          justifyContent: "flex-end",
+          marginLeft: "auto",
         }}
       >
         {/* Deposit Button */}
@@ -71,13 +67,15 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
           style={{
             display: "flex",
             alignItems: "center",
-            backgroundColor: "#5BCA8B",
+            backgroundColor: "#FFA500",
             color: "white",
             border: "none",
             borderRadius: "4px",
-            padding: "10px 16px",
+            padding: "8px 12px",
             fontWeight: "bold",
             cursor: "pointer",
+            marginRight: "16px",
+            whiteSpace: "nowrap",
             ...baseStyle,
           }}
         >
@@ -96,48 +94,56 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
         {/* Balance Display */}
         <div
           style={{
-            margin: "0px 30px",
+            marginRight: "16px",
             fontSize: "15px",
             fontWeight: "400",
-            color: "white",
+            color: "#FFA500",
+            whiteSpace: "nowrap",
             ...baseStyle,
           }}
         >
           {formatBalance(balance || 0)}
         </div>
 
-        {/* User Profile */}
+        {/* User Profile - Fixed spacing */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             cursor: "pointer",
+            paddingRight: "8px",
             ...baseStyle,
           }}
         >
           <div
             style={{
               width: "32px",
-              marginRight: "6px",
               height: "32px",
               borderRadius: "50%",
-              backgroundColor: "#5BCA8B",
+              backgroundColor: "#FFA500",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
               overflow: "hidden",
+              flexShrink: 0,
             }}
           >
             <svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
           </div>
-          <span style={{ marginRight: "40px" }}>
-            {user ? user.email.split("@")[0] : "AlexRooster"}
+          <span
+            style={{
+              marginLeft: "8px",
+              maxWidth: "80px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "block",
+            }}
+          >
+            {user ? user.email.split("@")[0] : "admin123"}
           </span>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M7 10l5 5 5-5H7z" />
-          </svg>
         </div>
       </div>
     </nav>
