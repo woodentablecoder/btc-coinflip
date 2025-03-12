@@ -21,8 +21,8 @@ const options = {
       eventsPerSecond: 10,
     },
     heartbeat: {
-      // Send a heartbeat every 5 seconds (reduced from 10)
-      interval: 5000
+      // Send a heartbeat every 1.65 seconds (reduced by 200% from 5 seconds)
+      interval: 1650
     },
     logger: (log) => {
       console.log(`SUPABASE REALTIME LOG: ${log.message}`, log);

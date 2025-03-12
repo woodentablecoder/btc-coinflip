@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-const CoinflipModal = ({ isOpen, game, winner, onClose }) => {
+const CoinflipModal = ({ isOpen, game, winner, currentUserId, onClose }) => {
   const [flipping, setFlipping] = useState(true);
   const [result, setResult] = useState(null);
-
+  
   useEffect(() => {
     if (isOpen) {
       // Start the animation
@@ -60,6 +60,20 @@ const CoinflipModal = ({ isOpen, game, winner, onClose }) => {
     opacity: flipping ? 0.5 : 1
   };
 
+  // Determine if the current user is the winner
+  const isUserWinner = result && currentUserId && (currentUserId === result);
+  const isUserInvolved = currentUserId && game && (game.player1_id === currentUserId || game.player2_id === currentUserId);
+  
+  // Debug output
+  console.log('CoinflipModal winner determination:', {
+    currentUserId,
+    winnerId: result,
+    isUserWinner,
+    isUserInvolved,
+    player1: game?.player1_id,
+    player2: game?.player2_id
+  });
+
   return (
     <div style={modalOverlayStyle}>
       <div style={modalContentStyle}>
@@ -84,12 +98,22 @@ const CoinflipModal = ({ isOpen, game, winner, onClose }) => {
               <p style={{ marginTop: '16px', fontSize: '20px', fontWeight: 'bold' }}>
                 {result ? (
                   <>
-                    <span style={{ color: '#16a34a' }}>
-                      Player {game.player1_id === result ? '1' : '2'} wins!
-                    </span>
-                    <span style={{ display: 'block', marginTop: '8px' }}>
-                      ₿ {(game.wager_amount * 2).toLocaleString('en-US').replace(/,/g, ' ')}
-                    </span>
+                    {!isUserInvolved && (
+                      <span style={{ color: '#16a34a', marginBottom: '8px', display: 'block' }}>
+                        Player {game.player1_id === result ? '1' : '2'} wins!
+                      </span>
+                    )}
+                    
+                    {isUserInvolved && !isUserWinner ? (
+                      <span style={{ color: '#dc2626' }}>
+                        Lost: ₿ {game.wager_amount.toLocaleString('en-US').replace(/,/g, ' ')}
+                      </span>
+                    ) : (
+                      <span style={{ color: isUserWinner ? '#16a34a' : 'inherit' }}>
+                        {isUserWinner ? 'Won: ' : 'Prize: '}
+                        ₿ {(game.wager_amount * 2).toLocaleString('en-US').replace(/,/g, ' ')}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <span style={{ color: '#dc2626' }}>Waiting for result...</span>

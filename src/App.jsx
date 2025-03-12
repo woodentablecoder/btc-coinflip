@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import supabase from './supabase';
 import Header from './components/Header';
 import Auth from './components/Auth';
@@ -17,6 +17,7 @@ function App() {
   const [currentGame, setCurrentGame] = useState(null);
   const [gameWinner, setGameWinner] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeGameCheckInterval, setActiveGameCheckInterval] = useState(null);
 
   // Check for auth session on load
   useEffect(() => {
@@ -180,19 +181,84 @@ function App() {
     setBalance(prevBalance => prevBalance - amount);
   };
 
-  // Open coinflip modal with game data
-  const handleOpenCoinflipModal = (game) => {
+  // Open coinflip modal with game data - memoized to prevent dependency cycles
+  const handleOpenCoinflipModal = useCallback((game) => {
+    console.log('App: Opening coinflip modal for game:', {
+      gameId: game.id,
+      player1: game.player1_id,
+      player2: game.player2_id,
+      status: game.status,
+      currentUserId: user?.id,
+      isCreator: game.player1_id === user?.id,
+      isJoiner: game.player2_id === user?.id
+    });
+    
     setCurrentGame(game);
     setGameWinner(null);
     setShowCoinflipModal(true);
-  };
+  }, [user]);
 
   // Handle game completion
   const handleGameComplete = (completedGame) => {
+    console.log('App: Game completed:', {
+      gameId: completedGame.id,
+      winner: completedGame.winner_id,
+      isCreatorWinner: completedGame.player1_id === completedGame.winner_id,
+      isCurrentUserWinner: completedGame.winner_id === user?.id
+    });
+    
+    // Make sure the winner ID is explicitly set
+    if (!completedGame.winner_id) {
+      console.error('No winner_id found in completed game!', completedGame);
+      return;
+    }
+    
+    // Set the winner ID to be used by the CoinflipModal
     setGameWinner(completedGame.winner_id);
+    console.log('Setting game winner to:', completedGame.winner_id);
+    
     // Fetch updated balance
     fetchUserBalance();
   };
+
+  // Poll for active games involving the current user
+  useEffect(() => {
+    if (!user) return;
+    
+    // Function to check for active games
+    const checkForActiveGames = async () => {
+      try {
+        console.log('Checking for active games involving user...');
+        const { data, error } = await supabase
+          .from('games')
+          .select('*')
+          .eq('status', 'active')
+          .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+          .is('completed_at', null);
+          
+        if (!error && data && data.length > 0) {
+          console.log('Found active game the user is involved in:', data[0]);
+          
+          // Only show the coinflip if a modal isn't already showing
+          if (!showCoinflipModal || (currentGame && currentGame.id !== data[0].id)) {
+            console.log('Opening coinflip modal for active game:', data[0].id);
+            handleOpenCoinflipModal(data[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking for active games:', err);
+      }
+    };
+    
+    // Check immediately upon user login
+    checkForActiveGames();
+    
+    // Set up an interval to check regularly
+    const intervalId = setInterval(checkForActiveGames, 2000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [user, showCoinflipModal, currentGame, handleOpenCoinflipModal]);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
@@ -220,6 +286,7 @@ function App() {
         isOpen={showCoinflipModal}
         game={currentGame}
         winner={gameWinner}
+        currentUserId={user?.id}
         onClose={() => setShowCoinflipModal(false)}
       />
       

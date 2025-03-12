@@ -108,4 +108,26 @@ CREATE TRIGGER cleanup_completed_games
 AFTER UPDATE OF status ON games
 FOR EACH ROW
 WHEN (NEW.status = 'completed')
-EXECUTE FUNCTION cleanup_old_games(); 
+EXECUTE FUNCTION cleanup_old_games();
+
+-- Function to join a game (workaround for RLS policy limitations)
+CREATE OR REPLACE FUNCTION join_game(game_id UUID, player_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  updated_rows INTEGER;
+BEGIN
+  UPDATE games
+  SET 
+    player2_id = player_id,
+    status = 'active'
+  WHERE 
+    id = game_id AND
+    status = 'pending' AND
+    player2_id IS NULL;
+    
+  GET DIAGNOSTICS updated_rows = ROW_COUNT;
+  
+  RETURN updated_rows > 0;
+END;
+$$ LANGUAGE plpgsql
+SECURITY DEFINER; -- This runs with the privileges of the function creator 
