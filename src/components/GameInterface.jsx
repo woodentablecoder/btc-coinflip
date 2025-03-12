@@ -10,35 +10,176 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
   const MIN_WAGER = 100; // ₿ 100 satoshis
   const MAX_WAGER = 100000000; // ₿ 100 000 000 satoshis
 
+  // Function to check Supabase realtime status
+  const checkRealtimeStatus = async () => {
+    try {
+      console.log('Checking Supabase realtime status...');
+      // Create a test channel with a simple listener
+      const testChannel = supabase.channel('test-connection');
+      testChannel
+        .on('system', { event: '*' }, (payload) => {
+          console.log('Supabase realtime system event:', payload);
+        })
+        .subscribe((status) => {
+          console.log('Test channel subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime connection is working');
+          } else {
+            console.warn('⚠️ Realtime connection issue:', status);
+          }
+          // Cleanup test channel after status check
+          setTimeout(() => supabase.removeChannel(testChannel), 5000);
+        });
+    } catch (error) {
+      console.error('Error checking realtime status:', error);
+    }
+  };
+
   // Fetch active games
   useEffect(() => {
     if (!user) return;
 
+    // Test the realtime connection
+    checkRealtimeStatus();
+
     const fetchGames = async () => {
-      const { data, error } = await supabase
-        .from('games')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      try {
+        console.log('Fetching active games...');
+        const { data, error } = await supabase
+          .from('games')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching games:', error);
-        return;
+        if (error) {
+          console.error('Error fetching games:', error);
+          return;
+        }
+
+        console.log(`Found ${data?.length || 0} active games:`, data);
+        setGames(data || []);
+      } catch (err) {
+        console.error('Error in fetchGames:', err);
       }
-
-      setGames(data || []);
     };
 
+    // Initial fetch
     fetchGames();
 
-    // Subscribe to changes
+    // Subscribe to changes - using a more specific channel name
+    const channelName = 'games-changes';
+    
+    console.log(`Setting up realtime subscription with channel: ${channelName}`);
+    
+    // Create a single channel with multiple event listeners
     const gamesSubscription = supabase
-      .channel('public:games')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, fetchGames)
-      .subscribe();
+      .channel(channelName)
+      .on('postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'games'
+          }, 
+          (payload) => {
+            console.log('Game INSERT detected:', payload);
+            // Add the new game to the list if it's pending
+            if (payload.new?.status === 'pending') {
+              console.log('Adding new game to UI:', payload.new.id);
+              setGames(prevGames => {
+                // Check if the game already exists in the list to avoid duplicates
+                const exists = prevGames.some(g => g.id === payload.new.id);
+                if (!exists) {
+                  return [payload.new, ...prevGames];
+                }
+                return prevGames;
+              });
+            } else {
+              console.log('Ignoring non-pending INSERT event');
+            }
+          })
+      .on('postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public', 
+            table: 'games'
+          },
+          (payload) => {
+            console.log('Game UPDATE detected:', payload);
+            if (!payload.new) {
+              console.warn('Update payload missing .new property');
+              return;
+            }
+            
+            // Remove games that are no longer pending
+            if (payload.new.status !== 'pending') {
+              console.log('Removing game that is no longer pending:', payload.new.id);
+              setGames(prevGames => prevGames.filter(g => g.id !== payload.new.id));
+            } 
+            // Update game data if it's still pending
+            else {
+              console.log('Updating existing pending game:', payload.new.id);
+              setGames(prevGames => {
+                const gameExists = prevGames.some(g => g.id === payload.new.id);
+                if (gameExists) {
+                  return prevGames.map(g => g.id === payload.new.id ? payload.new : g);
+                } else {
+                  // If the game doesn't exist but should be in the list, add it
+                  return [payload.new, ...prevGames];
+                }
+              });
+            }
+          })
+      .on('postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public', 
+            table: 'games'
+          },
+          (payload) => {
+            console.log('Game DELETE detected:', payload);
+            if (payload.old?.id) {
+              console.log('Removing deleted game from UI:', payload.old.id);
+              setGames(prevGames => prevGames.filter(g => g.id !== payload.old.id));
+            } else {
+              console.warn('Delete payload missing .old.id property');
+            }
+          })
+      .subscribe((status, err) => {
+        if (err) {
+          console.error(`Error subscribing to ${channelName}:`, err);
+        }
+        
+        console.log(`Subscription status for ${channelName}:`, status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log(`✅ Successfully subscribed to ${channelName}`);
+        } else if (status === 'TIMED_OUT') {
+          console.warn(`⚠️ Subscription timed out for ${channelName}`);
+          // Fallback to polling if subscription times out
+          const intervalId = setInterval(fetchGames, 1500);
+          return () => clearInterval(intervalId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`❌ Channel error for ${channelName}`);
+          // Fallback to polling on channel error
+          const intervalId = setInterval(fetchGames, 1500);
+          return () => clearInterval(intervalId);
+        } else if (status !== 'SUBSCRIBED') {
+          console.warn(`⚠️ Unexpected subscription status for ${channelName}: ${status}`);
+          // Fallback to polling if subscription fails
+          const intervalId = setInterval(fetchGames, 1500);
+          return () => clearInterval(intervalId);
+        }
+      });
 
+    // Fallback: Set up periodic polling even if subscription seems to work
+    // This ensures we always have up-to-date data even if realtime events are missed
+    const pollIntervalId = setInterval(fetchGames, 2500);
+
+    // Cleanup subscription and polling on unmount
     return () => {
+      console.log(`Cleaning up realtime subscription for ${channelName}`);
       supabase.removeChannel(gamesSubscription);
+      clearInterval(pollIntervalId);
     };
   }, [user]);
 
@@ -147,6 +288,10 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         amount: -satoshis
       });
       
+      // Manually add the new game to the UI for immediate feedback
+      // This ensures the UI updates even if the subscription is delayed
+      setGames(prevGames => [data, ...prevGames]);
+      
       setWagerAmount('');
     } catch (err) {
       console.error('Create game error:', err);
@@ -242,8 +387,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         throw new Error('Only pending games can be canceled');
       }
       
-      // Mark the game as 'completed' instead of 'cancelled' to comply with DB constraints
-      // The status check constraint only allows 'pending', 'active', 'completed'
+      // Mark the game as 'completed'
       const { error: updateError } = await supabase
         .from('games')
         .update({
@@ -257,16 +401,15 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         throw updateError;
       }
       
-      // No need to try deletion as the status update will ensure it doesn't show in the active games list
-      
       // Refund wager to user balance
       await supabase.rpc('update_balance', {
         user_id: user.id,
         amount: game.wager_amount
       });
       
-      // Immediately update the UI by removing the cancelled game from the local state
-      setGames(games.filter(g => g.id !== gameId));
+      // Manually remove the game from the UI for immediate feedback
+      // This ensures the UI updates even if the subscription is delayed
+      setGames(prevGames => prevGames.filter(g => g.id !== gameId));
       
       console.log('Game canceled successfully:', gameId);
       

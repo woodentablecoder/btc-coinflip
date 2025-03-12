@@ -9,19 +9,83 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables!');
 }
 
-// Initialize Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Supabase client options with improved real-time support
+const options = {
   auth: {
-    persistSession: true, // Default is true; the session is persisted in local storage
-    detectSessionInUrl: true, // Default is true; detects OAuth session params in URL
-    autoRefreshToken: true, // Default is true; automatically refreshes token
+    persistSession: true,
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
   },
-});
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+    heartbeat: {
+      // Send a heartbeat every 5 seconds (reduced from 10)
+      interval: 5000
+    },
+    logger: (log) => {
+      console.log(`SUPABASE REALTIME LOG: ${log.message}`, log);
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'btc-coinflip-web-app'
+    }
+  }
+};
+
+// Initialize Supabase client with options
+const supabase = createClient(supabaseUrl, supabaseAnonKey, options);
 
 // Add debug listener for auth events
 supabase.auth.onAuthStateChange((event, session) => {
   console.log('Supabase auth event:', event, session ? 'User authenticated' : 'No user');
 });
+
+// Test and log realtime connection status
+const testRealtimeConnection = async () => {
+  try {
+    // Access the realtime client instance
+    const { realtime } = supabase;
+
+    // Log current state
+    console.log('Realtime initial state:', {
+      isConnected: realtime?.isConnected() || false,
+      channels: realtime?.channels || []
+    });
+
+    // Setup a listener for connection open
+    const openHandler = () => {
+      console.log('🟢 Realtime connection established');
+    };
+
+    // Setup a listener for connection close
+    const closeHandler = () => {
+      console.log('🔴 Realtime connection closed');
+    };
+
+    // Setup a listener for connection error
+    const errorHandler = (event) => {
+      console.error('❌ Realtime connection error:', event);
+    };
+
+    // Add event listeners
+    if (realtime) {
+      realtime.getSocket().onopen = openHandler;
+      realtime.getSocket().onclose = closeHandler;
+      realtime.getSocket().onerror = errorHandler;
+    }
+  } catch (error) {
+    console.error('Error testing realtime connection:', error);
+  }
+};
+
+// Run connection test
+testRealtimeConnection();
 
 // Export initialized client
 export default supabase; 
