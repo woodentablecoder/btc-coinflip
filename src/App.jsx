@@ -17,6 +17,11 @@ import CoinflipModal from "./components/modals/CoinflipModal";
 import DepositModal from "./components/modals/DepositModal";
 import WithdrawModal from "./components/modals/WithdrawModal";
 import { isAdmin } from "./utils/adminUtils";
+// Import new components
+import SideBar from "./components/SideBar";
+import SidebarContent from "./components/SidebarContent";
+import ActiveGames from "./components/ActiveGames";
+import MessageOfTheDay from "./components/MessageOfTheDay";
 
 // Wrapper for route debugging
 const RouteDebugger = ({ children }) => {
@@ -99,303 +104,129 @@ function App() {
               .single();
 
             if (error) {
+              // If user doesn't exist, create a new user record
               if (error.code === "PGRST116") {
-                // User doesn't exist, create a new user record
-                console.log("Creating new user record for:", user.id);
+                console.log("User not found, creating new user:", user.id);
 
-                // Generate a mock BTC address
-                const mockAddress = generateMockBtcAddress();
-                console.log("Generated mock BTC address:", mockAddress);
-
-                // Insert the user with explicit ID to ensure it matches auth.id
-                const { error: insertError } = await supabase
+                // Create a new user with default values
+                const { data: newUser, error: createError } = await supabase
                   .from("users")
                   .insert({
                     id: user.id,
                     email: user.email,
-                    btc_address: mockAddress, // Use generated address
-                    balance: 0,
-                    username: null,
-                    avatar_url: null,
-                  });
-
-                if (insertError) {
-                  console.error("Error creating user record:", insertError);
-
-                  // If there's a duplicate key violation, the user might already exist
-                  if (insertError.code === "23505") {
-                    console.log("User already exists, retrying fetch...");
-                    retries--;
-                    // Short delay before retry
-                    await new Promise((resolve) => setTimeout(resolve, 500));
-                    continue;
-                  }
-
-                  throw insertError;
-                }
-
-                // Verify the user was created by fetching them
-                console.log("Verifying user creation...");
-                const { data: newUser, error: fetchError } = await supabase
-                  .from("users")
-                  .select("id, balance")
-                  .eq("id", user.id)
+                    balance: 100000, // Give initial balance of ₿ 100 000 satoshis
+                    username: `user_${user.id.substring(0, 6)}`,
+                    deposit_address: generateMockBtcAddress(),
+                  })
+                  .select()
                   .single();
 
-                if (fetchError) {
-                  console.error("Error verifying user creation:", fetchError);
-                  throw fetchError;
+                if (createError) {
+                  console.error("Error creating user:", createError);
+                  
+                  // If foreign key constraint error, it means records already exist
+                  // This can happen with RLS policies sometimes
+                  if (createError.code === "23503" && createError.message.includes("foreign key constraint")) {
+                    console.log("Foreign key constraint error. Retry with existing record.");
+                    retries--;
+                    // Wait a moment before retrying
+                    await new Promise((resolve) => setTimeout(resolve, 800));
+                    continue;
+                  } else {
+                    // Other error
+                    throw createError;
+                  }
                 }
 
-                console.log(
-                  "User successfully created and verified:",
-                  newUser.id
-                );
-                setBalance(newUser.balance || 0);
-                
-                // Update user object with profile data
-                setUser(prev => ({
-                  ...prev,
-                  username: null,
-                  avatar_url: null
-                }));
-                
-                // Mark as initialized
+                console.log("Created new user successfully:", newUser);
+                setBalance(newUser.balance);
                 userInitializedRef.current = user.id;
-                
-                break; // Success, exit the retry loop
+                break;
               } else {
-                console.error("Error checking if user exists:", error);
+                // Other DB error
+                console.error("Error fetching user:", error);
                 throw error;
               }
-            } else if (data) {
+            } else {
+              // User exists
               console.log("User found:", data);
               setBalance(data.balance);
-              
-              // Update user object with profile data
-              setUser(prev => ({
-                ...prev,
-                username: data.username,
-                avatar_url: data.avatar_url
-              }));
-              
-              // Mark as initialized
               userInitializedRef.current = user.id;
-              
-              break; // Exit the retry loop
+              break;
             }
-          } catch (error) {
-            console.error("Error in user initialization:", error);
+          } catch (err) {
+            console.error("Error in user initialization:", err);
             retries--;
-            if (retries === 0) {
-              console.error(
-                "Failed to initialize user after multiple attempts"
-              );
-            } else {
-              // Wait a moment before retrying
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
+            // Wait a moment before retrying
+            await new Promise((resolve) => setTimeout(resolve, 800));
           }
         }
+
+        // Check if the user is an admin
+        const adminStatus = await isAdmin(user.id);
+        setUserIsAdmin(adminStatus);
+        console.log("User admin status:", adminStatus);
 
         setLoading(false);
       };
 
       initializeUser();
 
-      // Subscribe to balance changes using a more robust approach
-      let balanceSubscription;
-      try {
-        console.log("Setting up balance subscription for user:", user.id);
-        balanceSubscription = supabase
-          .channel(`public:users:id=eq.${user.id}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "users",
-              filter: `id=eq.${user.id}`,
-            },
-            (payload) => {
-              console.log("Balance update received:", payload);
-              fetchUserBalance();
+      // Set up real-time subscription to the user's balance
+      const balanceChannel = supabase
+        .channel(`balance-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "users",
+            filter: `id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("Balance update received:", payload);
+            if (payload.new && typeof payload.new.balance === "number") {
+              setBalance(payload.new.balance);
             }
-          )
-          .subscribe((status) => {
-            // Only log meaningful status changes - reduce noise
-            if (status !== "CLOSED") {
-              console.log(`Balance subscription status: ${status}`);
-            }
-          });
-      } catch (error) {
-        console.error("Error setting up balance subscription:", error);
-      }
-
-      return () => {
-        // Proper cleanup of subscription without excessive logging
-        if (balanceSubscription) {
-          try {
-            supabase.removeChannel(balanceSubscription);
-          } catch (error) {
-            console.error("Error removing channel:", error);
           }
-        }
+        )
+        .subscribe((status) => {
+          console.log("Balance subscription status:", status);
+        });
+
+      // Cleanup function
+      return () => {
+        supabase.removeChannel(balanceChannel);
       };
     }
   }, [user]);
 
-  // Function to fetch user balance
-  const fetchUserBalance = async () => {
-    if (!user) return;
+  // Handle game completion
+  const handleGameComplete = useCallback((game, winner) => {
+    console.log("Game completed:", game);
+    setCurrentGame(game);
+    setGameWinner(winner);
+    setShowCoinflipModal(true);
+  }, []);
 
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("balance")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-
-      setBalance(data.balance);
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-    }
-  };
+  // Handle opening the coinflip modal directly
+  const handleOpenCoinflipModal = useCallback((game, winner) => {
+    setCurrentGame(game);
+    setGameWinner(winner);
+    setShowCoinflipModal(true);
+  }, []);
 
   // Handle deposit completion
-  const handleDeposit = (amount) => {
-    // Update local balance state (the actual DB update happens in the DepositModal)
-    setBalance((prevBalance) => prevBalance + amount);
+  const handleDeposit = async (amount) => {
+    console.log("Deposit completed:", amount);
+    setShowDepositModal(false);
   };
 
   // Handle withdraw completion
-  const handleWithdraw = (amount) => {
-    // Update local balance state (the actual DB update happens in the WithdrawModal)
-    setBalance((prevBalance) => prevBalance - amount);
+  const handleWithdraw = async (amount, address) => {
+    console.log("Withdraw requested:", amount, "to", address);
+    setShowWithdrawModal(false);
   };
-
-  // Handle game completion
-  const handleGameComplete = (completedGame) => {
-    console.log("App: Game completed:", {
-      gameId: completedGame.id,
-      winner: completedGame.winner_id,
-      isCreatorWinner: completedGame.player1_id === completedGame.winner_id,
-      isCurrentUserWinner: completedGame.winner_id === user?.id,
-    });
-
-    // Make sure the winner ID is explicitly set
-    if (!completedGame.winner_id) {
-      console.error("No winner_id found in completed game!", completedGame);
-      return;
-    }
-
-    // Set the winner ID to be used by the CoinflipModal
-    setGameWinner(completedGame.winner_id);
-    console.log("Setting game winner to:", completedGame.winner_id);
-
-    // Fetch updated balance
-    fetchUserBalance();
-  };
-
-  // Open coinflip modal with game data - memoized to prevent dependency cycles
-  const handleOpenCoinflipModal = useCallback(
-    (game, winner = null) => {
-      // Prevent duplicate openings for the same game
-      if (showCoinflipModal && currentGame && currentGame.id === game.id) {
-        console.log("Coinflip modal already open for this game, updating winner if needed");
-        // Just update the winner if it's provided and wasn't set before
-        if (winner && !gameWinner) {
-          setGameWinner(winner);
-        }
-        return;
-      }
-      
-      console.log("App: Opening coinflip modal for game:", {
-        gameId: game.id,
-        player1: game.player1_id,
-        player2: game.player2_id,
-        status: game.status,
-        currentUserId: user?.id,
-        isCreator: game.player1_id === user?.id,
-        isJoiner: game.player2_id === user?.id,
-        winner: winner
-      });
-
-      setCurrentGame(game);
-      setGameWinner(winner);
-      setShowCoinflipModal(true);
-    },
-    [user, showCoinflipModal, currentGame, gameWinner]
-  );
-
-  // Poll for active games involving the current user
-  useEffect(() => {
-    if (!user) return;
-
-    const lastCheckTimeRef = { current: 0 };
-
-    // Function to check for active games
-    const checkForActiveGames = async () => {
-      // Implement debouncing to prevent too frequent checks
-      const now = Date.now();
-      if (now - lastCheckTimeRef.current < 3000) {
-        console.log("Debouncing active games check - too frequent");
-        return;
-      }
-      
-      lastCheckTimeRef.current = now;
-      
-      try {
-        console.log("Checking for active games involving user...");
-        const { data, error } = await supabase
-          .from("games")
-          .select("*")
-          .eq("status", "active")
-          .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-          .is("completed_at", null);
-
-        if (!error && data && data.length > 0) {
-          console.log("Found active game the user is involved in:", data[0]);
-
-          // Only show the coinflip if a modal isn't already showing
-          if (
-            !showCoinflipModal ||
-            (currentGame && currentGame.id !== data[0].id)
-          ) {
-            console.log("Opening coinflip modal for active game:", data[0].id);
-            handleOpenCoinflipModal(data[0], data[0].winner_id);
-          }
-        }
-      } catch (err) {
-        console.error("Error checking for active games:", err);
-      }
-    };
-
-    // Check immediately upon user login
-    checkForActiveGames();
-
-    // Set up an interval to check regularly
-    const intervalId = setInterval(checkForActiveGames, 10000); // Increased to 10 seconds
-
-    // Clean up interval on unmount
-    return () => clearInterval(intervalId);
-  }, [user, showCoinflipModal, currentGame, handleOpenCoinflipModal]);
-
-  // Check admin status
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        const adminStatus = await isAdmin();
-        setUserIsAdmin(adminStatus);
-      } else {
-        setUserIsAdmin(false);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user]);
 
   return (
     <Router>
@@ -407,8 +238,11 @@ function App() {
           padding: 0,
           paddingTop: 0,
           backgroundColor: "#000",
+          display: "flex",
+          flexDirection: "column"
         }}
       >
+        {/* Header stays at the top */}
         <Header
           user={user}
           balance={balance}
@@ -422,6 +256,7 @@ function App() {
               path="/"
               element={
                 !session ? (
+                  // Login page
                   <main
                     style={{
                       maxWidth: "1200px",
@@ -430,23 +265,58 @@ function App() {
                       paddingTop: "0",
                     }}
                   >
+                    {/* Sidebar for non-logged in users too */}
+                    <SideBar>
+                      <SidebarContent user={null} />
+                    </SideBar>
+                    
                     <Auth />
                   </main>
                 ) : (
-                  <main
-                    style={{
-                      maxWidth: "1200px",
-                      margin: "0 auto",
-                      padding: "16px",
-                      paddingTop: "0",
-                    }}
-                  >
-                    <GameInterface
-                      user={user}
-                      onGameComplete={handleGameComplete}
-                      onOpenCoinflipModal={handleOpenCoinflipModal}
-                    />
-                  </main>
+                  // New layout with sidebar, message of the day, and active games
+                  <div style={{ 
+                    display: "flex", 
+                    flexDirection: "column", 
+                    height: "calc(100vh - 64px)",
+                    margin: 0,
+                    padding: 0
+                  }}>
+                    {/* Sidebar */}
+                    <SideBar>
+                      <SidebarContent user={user} />
+                    </SideBar>
+                    
+                    {/* Message of the day */}
+                    <MessageOfTheDay user={user} isAdmin={userIsAdmin} />
+                    
+                    {/* Main content area */}
+                    <main
+                      style={{
+                        padding: "16px",
+                        paddingTop: "24px",
+                        paddingBottom: "24px",
+                        flexGrow: 1,
+                        display: "flex",
+                        justifyContent: "center",
+                        margin: 0,
+                        overflow: "auto"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: "1200px",
+                        }}
+                      >
+                        {/* Active games section */}
+                        <ActiveGames
+                          user={user}
+                          onGameComplete={handleGameComplete}
+                          onOpenCoinflipModal={handleOpenCoinflipModal}
+                        />
+                      </div>
+                    </main>
+                  </div>
                 )
               }
             />
@@ -454,13 +324,27 @@ function App() {
               path="/admin"
               element={
                 <ProtectedAdminRoute user={user}>
+                  <SideBar>
+                    <SidebarContent user={user} />
+                  </SideBar>
                   <AdminDashboard />
                 </ProtectedAdminRoute>
               }
             />
             <Route
               path="/profile"
-              element={user ? <UserProfile user={user} /> : <Navigate to="/" replace />}
+              element={
+                user ? (
+                  <>
+                    <SideBar>
+                      <SidebarContent user={user} />
+                    </SideBar>
+                    <UserProfile user={user} />
+                  </>
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
             />
             {/* Catch-all route for debugging */}
             <Route 

@@ -65,77 +65,68 @@ const MessageOfTheDay = ({ user, isAdmin }) => {
 
   return (
     <div style={{
-      width: "calc(100% - 250px)",  // Subtract sidebar width
-      marginLeft: "250px",          // Match the sidebar width
-      backgroundColor: "#1a1a1a",
-      color: "#f7931a",
-      padding: "8px 16px",
+      backgroundColor: "#F7931A", // Green color as per your layout description
+      color: "white",
+      padding: "12px 16px",
       textAlign: "center",
       fontFamily: "'GohuFontuni11NerdFont', monospace",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      position: "sticky",
+      position: "relative", // Changed from sticky
       top: 0,
-      zIndex: 1001,
-      margin: 0
+      zIndex: 999,
+      width: "100%",
+      margin: 0,
+      marginBottom: "12px" // Add bottom margin for more even spacing
     }}>
       {isEditing ? (
-        <input
-          type="text"
-          value={editedMessage}
-          onChange={(e) => setEditedMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{
-            backgroundColor: "#2a2a2a",
-            color: "#f7931a",
-            border: "1px solid #f7931a",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            fontFamily: "'GohuFontuni11NerdFont', monospace",
-            width: "80%",
-          }}
-          autoFocus
-        />
+        <div style={{ 
+          display: "flex", 
+          width: "100%", 
+          justifyContent: "center", 
+          alignItems: "center" 
+        }}>
+          <input
+            type="text"
+            value={editedMessage}
+            onChange={(e) => setEditedMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            style={{
+              backgroundColor: "#2a2a2a",
+              color: "white",
+              border: "1px solid #fff",
+              padding: "4px 8px",
+              borderRadius: "4px",
+              fontFamily: "'GohuFontuni11NerdFont', monospace",
+              width: "80%",
+              textAlign: "center"
+            }}
+            autoFocus
+          />
+        </div>
       ) : (
-        <div>{message || "No message of the day set"}</div>
-      )}
-
-      {isAdmin && (
-        <div style={{ position: "absolute", right: "16px" }}>
-          {isEditing ? (
-            <button
-              onClick={updateMessage}
-              style={{
-                backgroundColor: "transparent",
-                color: "#f7931a",
-                border: "1px solid #f7931a",
-                borderRadius: "4px",
-                padding: "2px 8px",
-                marginLeft: "8px",
-                marginRight: "30px", 
-                cursor: "pointer",
-                fontFamily: "'GohuFontuni11NerdFont', monospace",
-              }}
-            >
-              Save
-            </button>
-          ) : (
+        <div style={{ display: "flex", width: "100%", justifyContent: "center", alignItems: "center" }}>
+          <p style={{ margin: 0 }}>{message || "Welcome to BTC Coinflip!"}</p>
+          
+          {isAdmin && (
             <button
               onClick={() => setIsEditing(true)}
               style={{
-                backgroundColor: "transparent",
-                color: "#f7931a",
-                border: "1px solid #f7931a",
-                borderRadius: "4px",
-                padding: "2px 8px",
-                marginLeft: "8px",
-                marginRight: "30px", 
+                backgroundColor: "rgb(255, 255, 255)",
+                color: "#F7931A",
                 cursor: "pointer",
+                marginLeft: "10px",
+                padding: "2px 5px",
+                fontSize: "9px",
+                fontWeight: "bold",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
                 fontFamily: "'GohuFontuni11NerdFont', monospace",
+                transition: "all 0.2s ease"
               }}
             >
-              Edit
+              EDIT
             </button>
           )}
         </div>

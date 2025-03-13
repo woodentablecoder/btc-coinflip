@@ -140,15 +140,14 @@ const UserProfile = ({ user }) => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '90vh',
-      padding: '20px',
-      paddingTop: '0',
-      color: 'white'
+    <div className="user-profile" style={{ 
+      padding: "20px", 
+      paddingLeft: "20px", // Position correctly with sidebar
+      marginLeft: "auto", // Push content to right of sidebar
+      marginRight: "auto",
+      maxWidth: "1200px",
+      width: "100%",
+      boxSizing: "border-box"
     }}>
       <div style={{ 
         width: '100%', 

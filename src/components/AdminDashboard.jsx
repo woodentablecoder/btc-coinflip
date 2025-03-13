@@ -594,7 +594,15 @@ const AdminDashboard = () => {
     return <div className="admin-loading">Loading admin dashboard...</div>;
 
   return (
-    <div className="admin-dashboard">
+    <div className="admin-dashboard" style={{ 
+      padding: "20px", 
+      paddingLeft: "20px", // Position correctly with sidebar
+      marginLeft: "auto", // Push content to right of sidebar
+      marginRight: "auto",
+      maxWidth: "1200px",
+      width: "100%",
+      boxSizing: "border-box"
+    }}>
       <h1>Admin Dashboard</h1>
 
       {error && <div className="error-message">{error}</div>}
