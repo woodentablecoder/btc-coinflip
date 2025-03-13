@@ -10,7 +10,6 @@ import supabase from "./supabase";
 import Header from "./components/Header";
 import Auth from "./components/Auth";
 import GameInterface from "./components/GameInterface";
-import CoinflipGame from "./components/CoinflipGame";
 import AdminDashboard from "./components/AdminDashboard";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import UserProfile from "./components/UserProfile";
@@ -299,6 +298,16 @@ function App() {
   // Open coinflip modal with game data - memoized to prevent dependency cycles
   const handleOpenCoinflipModal = useCallback(
     (game, winner = null) => {
+      // Prevent duplicate openings for the same game
+      if (showCoinflipModal && currentGame && currentGame.id === game.id) {
+        console.log("Coinflip modal already open for this game, updating winner if needed");
+        // Just update the winner if it's provided and wasn't set before
+        if (winner && !gameWinner) {
+          setGameWinner(winner);
+        }
+        return;
+      }
+      
       console.log("App: Opening coinflip modal for game:", {
         gameId: game.id,
         player1: game.player1_id,
@@ -314,7 +323,7 @@ function App() {
       setGameWinner(winner);
       setShowCoinflipModal(true);
     },
-    [user]
+    [user, showCoinflipModal, currentGame, gameWinner]
   );
 
   // Poll for active games involving the current user
@@ -411,29 +420,6 @@ function App() {
                     }}
                   >
                     <GameInterface
-                      user={user}
-                      onGameComplete={handleGameComplete}
-                      onOpenCoinflipModal={handleOpenCoinflipModal}
-                    />
-                  </main>
-                )
-              }
-            />
-            <Route
-              path="/coinflip"
-              element={
-                !session ? (
-                  <Navigate to="/" replace />
-                ) : (
-                  <main
-                    style={{
-                      maxWidth: "1200px",
-                      margin: "0 auto",
-                      padding: "16px",
-                      paddingTop: "80px",
-                    }}
-                  >
-                    <CoinflipGame
                       user={user}
                       onGameComplete={handleGameComplete}
                       onOpenCoinflipModal={handleOpenCoinflipModal}

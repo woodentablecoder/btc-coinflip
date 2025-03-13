@@ -108,7 +108,8 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
           .select("*")
           .eq("status", "active")
           .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-          .is("completed_at", null);
+          .is("completed_at", null)
+          .is("winner_id", null);
 
         if (!activeError && activeGames && activeGames.length > 0) {
           console.log(
@@ -172,6 +173,37 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
             }
           }
         )
+        // Add specific subscription for games created by current user
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "games",
+            filter: `player1_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log("Game UPDATE detected for games created by user:", payload);
+            
+            // Specifically watch for pending->active transition for games created by this user
+            if (payload.new?.status === "active" && payload.old?.status === "pending") {
+              console.log("Game creator: Game joined by another player, showing coinflip:", {
+                gameId: payload.new.id,
+                oldStatus: payload.old?.status,
+                newStatus: payload.new.status,
+              });
+              
+              // Show the coinflip modal to the creator
+              onOpenCoinflipModal(payload.new);
+              
+              // Execute the coinflip after a delay
+              setTimeout(() => {
+                console.log("Executing coinflip for game (creator view):", payload.new.id);
+                executeCoinflip(payload.new);
+              }, 3000);
+            }
+          }
+        )
         .on(
           "postgres_changes",
           {
@@ -200,7 +232,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
             // If game status changed from pending to active
             if (
               payload.new.status === "active" &&
-              payload.old?.status === "pending"
+              (payload.old?.status === "pending" || !payload.old)
             ) {
               // Check if current user is involved in this game (either creator or joiner)
               if (
@@ -1218,18 +1250,13 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                       <div>{new Date(game.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</div>
                     </div>
 
-                    {/* Column 4: Value */}
+                    {/* Column 4: Team (was previously Column 6) */}
                     <div style={{ 
                       padding: "16px",
                       borderRight: "1px solid #374151",
                     }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
-                      <div style={{ 
-                        display: "inline-block",
-                        color: "#f7931a",
-                      }}>
-                        {formatSatoshis(game.wager_amount)}
-                      </div>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Team</div>
+                      <div>{game.id.charCodeAt(0) % 2 === 0 ? "Heads" : "Tails"}</div>
                     </div>
 
                     {/* Column 5: Multiplier */}
@@ -1242,13 +1269,18 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                       <div>2x</div>
                     </div>
 
-                    {/* Column 6: Team */}
+                    {/* Column 6: Value (was previously Column 4) */}
                     <div style={{ 
                       padding: "16px",
                       borderRight: "1px solid #374151",
                     }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Team</div>
-                      <div>{game.id.charCodeAt(0) % 2 === 0 ? "Heads" : "Tails"}</div>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
+                      <div style={{ 
+                        display: "inline-block",
+                        color: "#f7931a",
+                      }}>
+                        {formatSatoshis(game.wager_amount)}
+                      </div>
                     </div>
 
                     {/* Action button */}
@@ -1268,7 +1300,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                             opacity: loading ? 0.5 : 1,
                             whiteSpace: "nowrap",
                             border: "none",
-                            fontFamily: "'GohuFontuni11NerdFont', monospace"
+                            fontFamily: "'GohuFont14NerdFont', monospace"
                           }}
                         >
                           Cancel Game

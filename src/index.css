@@ -11,6 +11,15 @@
   font-display: swap;
 }
 
+/* Font declaration for GohuFont14NerdFont-Regular */
+@font-face {
+  font-family: "GohuFont14NerdFont";
+  src: url("/fonts/Gohu/GohuFont14NerdFont-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Dark mode theme */
 :root {
   font-family: "GohuFontuni11NerdFont", monospace;
