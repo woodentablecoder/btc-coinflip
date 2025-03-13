@@ -96,133 +96,102 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     fontFamily: "'GohuFontuni11NerdFont', monospace",
   };
 
-  return (
-    <nav
-      style={{
+  // Sidebar component with chat section
+  const Sidebar = () => {
+    return (
+      <div style={{
         position: "fixed",
-        top: 0,
         left: 0,
-        width: "100%",
-        backgroundColor: "transparent",
-        color: "white",
-        padding: "12px 24px",
-        zIndex: 1000,
+        top: 0,
+        bottom: 0,
+        width: "360px",
+        backgroundColor: "rgba(16, 16, 20, 0.95)",
+        borderRight: "1px solid rgba(255, 255, 255, 0.1)",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        boxSizing: "border-box",
+        flexDirection: "column",
+        color: "white",
+        zIndex: 1000,
         ...baseStyle,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-        <Link
-          to="/"
-          style={{
-            color: "#f8fafc",
-            textDecoration: "none",
-            fontWeight: "bold",
-            fontSize: "1.2rem",
-          }}
-        >
-          SATOSHIFLIP
-        </Link>
-        
-        {user && (
-          <div style={{ display: "flex", gap: "20px" }}>
-            {userIsAdmin && (
-              <Link
-                to="/admin"
-                style={{
-                  color: "#f8fafc",
-                  textDecoration: "none",
-                  fontSize: "14px",
-                }}
-              >
-                Admin
-              </Link>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Right Section - User Profile, Balance and Admin */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        {/* Balance Display */}
-        <div
-          style={{
-            fontSize: "18px",
-            padding: "8px 12px",
-            backgroundColor: "rgba(255, 255, 255, 0.09)", 
-            color: "#F7931A",
-            borderRadius: "4px",
-            cursor: "pointer",
-            ...baseStyle,
-          }}
-          onClick={onOpenDepositModal}
-        >
-          ₿ {formatBalance(balance || 0)}
-        </div>
-
-        {/* User Profile */}
-        <div
-          ref={userMenuRef}
-          style={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <div
-            onClick={toggleUserMenu}
+      }}>
+        {/* Sidebar header with admin and profile */}
+        <div style={{ padding: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+          {/* Admin Button */}
+          {user && userIsAdmin && (
+            <Link
+              to="/admin"
+              style={{
+                display: "block",
+                fontSize: "16px",
+                color: "white",
+                textDecoration: "none",
+                fontWeight: "400",
+                padding: "8px 12px",
+                backgroundColor: 'transparent',
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "4px",
+                marginBottom: "12px",
+                textAlign: "center",
+                ...baseStyle,
+              }}
+            >
+              Admin
+            </Link>
+          )}
+          
+          {/* User Profile */}
+          <div 
+            ref={userMenuRef}
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               cursor: "pointer",
+              padding: "8px 0",
             }}
+            onClick={toggleUserMenu}
           >
-            <div
-              style={{
-                width: "18px",
-                height: "18px",
-                
-                backgroundColor: "transparent", 
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                overflow: "hidden",
-                padding: "0px 0px",
-                margin: "0px 0px",
-              }}
-            >
-              <img
-                src="/images/icon.png"
-                alt="Profile"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <div
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  backgroundColor: "transparent",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  overflow: "hidden",
+                  marginRight: "8px",
+                }}
+              >
+                <img
+                  src="/images/icon.png"
+                  alt="Profile"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <span style={{ marginLeft: "8px", marginRight: "6px" }}>
+                {user?.username || user?.email?.split('@')[0] || user?.id || "Account"}
+              </span>
+              {/* Dropdown Arrow */}
+              <svg 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="white"
+              >
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
             </div>
-            {/* Dropdown Arrow */}
-            <svg 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill="white" 
-              style={{ marginLeft: "6px" }}
-            >
-              <path d="M7 10l5 5 5-5z" />
-            </svg>
           </div>
-
+          
           {/* User Dropdown Menu */}
           {showUserMenu && (
             <div style={{
-              position: "absolute",
-              top: "45px",
-              left: "0",
               backgroundColor: "rgba(28, 28, 35, 0.95)",
               borderRadius: "8px",
               boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)",
-              minWidth: "180px",
-              zIndex: 1001,
+              width: "100%",
+              marginTop: "8px",
               backdropFilter: "blur(8px)",
               border: "1px solid rgba(255, 255, 255, 0.1)"
             }}>
@@ -245,7 +214,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="white" style={{ marginRight: "10px" }}>
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                 </svg>
-                Profile
+                Edit Profile
               </Link>
               <button 
                 onClick={handleSignOut}
@@ -260,10 +229,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
                   color: "white",
                   cursor: "pointer",
                   transition: "background-color 0.2s",
-                  fontFamily: "'GohuFontuni11NerdFont', monospace",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.1)"
-                  }
+                  fontFamily: "'GohuFontuni11NerdFont', monospace"
                 }}
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="white" style={{ marginRight: "10px" }}>
@@ -273,28 +239,153 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
               </button>
             </div>
           )}
-        </div>
-
-        {/* Admin Button (visible only for admin users) */}
-        {user && userIsAdmin && (
-          <Link
-            to="/admin"
+          
+          {/* Balance Display */}
+          <div
             style={{
-              fontSize: "20px",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: "400",
-              padding: "8px 16px",
-              backgroundColor: 'transparent',
-              border: "1px solid white",
+              fontSize: "16px",
+              padding: "12px 0",
+              marginTop: "12px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              cursor: "pointer",
               ...baseStyle,
             }}
+            onClick={onOpenDepositModal}
           >
-            Admin
-          </Link>
-        )}
+            <span>Balance</span>
+            <span style={{ color: "#F7931A" }}>₿ {formatBalance(balance || 0)}</span>
+          </div>
+        </div>
+        
+        {/* Chat Section */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          flex: 1,
+          padding: "16px",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        }}>
+          <h3 style={{ 
+            fontSize: "14px", 
+            margin: "0 0 16px 0",
+            color: "rgba(255, 255, 255, 0.7)",
+            textTransform: "uppercase",
+            letterSpacing: "1px"
+          }}>
+            Chat
+          </h3>
+          
+          {/* Chat messages area - empty skeleton */}
+          <div style={{ 
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+            marginBottom: "16px",
+            fontSize: "14px",
+          }}>
+            <div style={{ 
+              padding: "8px 12px",
+              backgroundColor: "rgba(255, 255, 255, 0.03)",
+              borderRadius: "8px",
+              marginBottom: "8px",
+              opacity: 0.6
+            }}>
+              Welcome to the chat!
+            </div>
+            
+            <div style={{ 
+              opacity: 0.4,
+              textAlign: "center",
+              padding: "20px 0",
+              fontSize: "12px"
+            }}>
+              No messages yet
+            </div>
+          </div>
+          
+          {/* Chat input */}
+          <div style={{ 
+            display: "flex",
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+            paddingTop: "16px"
+          }}>
+            <input
+              type="text"
+              placeholder="Type a message..."
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                border: "none",
+                padding: "10px 12px",
+                borderRadius: "4px",
+                color: "white",
+                fontSize: "14px",
+                fontFamily: "'GohuFontuni11NerdFont', monospace",
+                outline: "none"
+              }}
+            />
+            <button
+              style={{
+                backgroundColor: "#F7931A",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                marginLeft: "8px",
+                padding: "8px 12px",
+                cursor: "pointer",
+                fontFamily: "'GohuFontuni11NerdFont', monospace",
+                fontSize: "14px"
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </div>
       </div>
-    </nav>
+    );
+  };
+
+  return (
+    <>
+      {/* Sidebar with chat */}
+      <Sidebar />
+      
+      {/* Main navigation bar - only contains the logo now */}
+      <nav
+        style={{
+          position: "fixed",
+          top: 0,
+          left: "260px", // Account for sidebar width
+          right: 0,
+          backgroundColor: "transparent",
+          color: "white",
+          padding: "12px 24px",
+          zIndex: 999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          boxSizing: "border-box",
+          ...baseStyle,
+        }}
+      >
+        {/* Site Logo */}
+        <Link
+          to="/"
+          style={{
+            color: "#f8fafc",
+            textDecoration: "none",
+            fontWeight: "bold",
+            fontSize: "1.2rem",
+          }}
+        >
+          SATOSHIFLIP
+        </Link>
+      </nav>
+    </>
   );
 };
 
