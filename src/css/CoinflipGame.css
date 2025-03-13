@@ -53,6 +53,7 @@
   background-color: #1A393E;
   border-radius: 8px 8px 0 0;
   margin-top: 20px;
+  margin-left: 150px; /* Added 150px margin to move the section right */
   overflow: hidden;
 }
 

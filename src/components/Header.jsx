@@ -6,6 +6,7 @@ import { isAdmin } from "../utils/adminUtils.jsx";
 const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const userMenuRef = useRef(null);
   const adminCheckAttempts = useRef(0);
   const navigate = useNavigate();
@@ -73,6 +74,26 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     };
   }, []);
 
+  // Check window size and collapse sidebar accordingly
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1500) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const formatBalance = (balanceInSatoshis) => {
     // Format the balance with space separators as per spec
     return `${
@@ -89,6 +110,11 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
 
   const toggleUserMenu = () => {
     setShowUserMenu(!showUserMenu);
+  };
+
+  // Toggle sidebar function
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   // Base font style to apply throughout the navbar
@@ -351,40 +377,327 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
 
   return (
     <>
-      {/* Sidebar with chat */}
-      <Sidebar />
-      
-      {/* Main navigation bar - only contains the logo now */}
-      <nav
+      {/* Sidebar toggle button for mobile view */}
+      {sidebarCollapsed && (
+        <button
+          onClick={toggleSidebar}
+          style={{
+            position: "fixed",
+            left: "10px",
+            top: "10px",
+            zIndex: 1001,
+            background: "rgba(28, 28, 35, 0.8)",
+            border: "none",
+            borderRadius: "4px",
+            padding: "8px",
+            cursor: "pointer",
+            color: "white",
+          }}
+        >
+          ☰
+        </button>
+      )}
+
+      {/* Sidebar */}
+      <div
         style={{
           position: "fixed",
           top: 0,
-          left: "260px", // Account for sidebar width
-          right: 0,
-          backgroundColor: "transparent",
+          left: 0,
+          width: sidebarCollapsed ? "60px" : "300px",
+          height: "100vh",
+          backgroundColor: "rgba(17, 17, 23, 0.95)",
           color: "white",
-          padding: "12px 24px",
-          zIndex: 999,
+          transition: "width 0.3s ease",
+          zIndex: 1000,
+          boxShadow: "0 0 10px rgba(0, 0, 0, 0.5)",
+          overflow: "hidden",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          boxSizing: "border-box",
-          ...baseStyle,
+          flexDirection: "column",
         }}
       >
-        {/* Site Logo */}
+      
+        {/* Admin Button */}
+        {user && userIsAdmin && (
+          <Link
+            to="/admin"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: sidebarCollapsed ? "center" : "flex-start",
+              color: "white",
+              textDecoration: "none",
+              padding: "20px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+              fontFamily: "'GohuFontuni11NerdFont', monospace",
+            }}
+          >
+            {sidebarCollapsed ? "A" : "Admin"}
+          </Link>
+        )}
+
+        {/* Home Icon Link - Added above the user profile */}
         <Link
           to="/"
           style={{
-            color: "#f8fafc",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: sidebarCollapsed ? "center" : "flex-start",
+            color: "white",
             textDecoration: "none",
-            fontWeight: "bold",
-            fontSize: "1.2rem",
+            padding: "20px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            fontFamily: "'GohuFontuni11NerdFont', monospace",
           }}
         >
-          SATOSHIFLIP
+          {!sidebarCollapsed && <span>Coinflip</span>}
         </Link>
-      </nav>
+
+        {/* User Profile */}
+        <div
+          ref={userMenuRef}
+          style={{
+            position: "relative",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          }}
+        >
+          <div
+            onClick={toggleUserMenu}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "15px 20px",
+              cursor: "pointer",
+              justifyContent: sidebarCollapsed ? "center" : "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <div
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  backgroundColor: "transparent",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  src="/images/icon.png"
+                  alt="Profile"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              {!sidebarCollapsed && (
+                <span style={{ marginLeft: "10px" }}>
+                  {user?.username || user?.email?.split('@')[0] || user?.id || "Account"}
+                </span>
+              )}
+            </div>
+            {!sidebarCollapsed && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
+            )}
+          </div>
+
+          {/* User Dropdown Menu */}
+          {showUserMenu && (
+            <div style={{
+              position: sidebarCollapsed ? "absolute" : "relative",
+              left: sidebarCollapsed ? "60px" : "0",
+              top: sidebarCollapsed ? "0" : "auto",
+              backgroundColor: "rgba(28, 28, 35, 0.95)",
+              width: sidebarCollapsed ? "180px" : "100%",
+              zIndex: 1001,
+              border: sidebarCollapsed ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
+              borderRadius: sidebarCollapsed ? "0 8px 8px 0" : "0",
+            }}>
+              <Link 
+                to="/profile"
+                onClick={() => setShowUserMenu(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "12px 16px",
+                  color: "white",
+                  textDecoration: "none",
+                  borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="white" style={{ marginRight: "10px" }}>
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+                Edit Profile
+              </Link>
+              <button 
+                onClick={handleSignOut}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  width: "100%",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
+                  padding: "12px 16px",
+                  color: "red",
+                  cursor: "pointer",
+                  fontFamily: "'GohuFontuni11NerdFont', monospace",
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="red" style={{ marginRight: "10px" }}>
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Balance Display */}
+        <div
+          style={{
+            padding: "15px 20px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            display: "flex",
+            justifyContent: sidebarCollapsed ? "center" : "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+          }}
+          onClick={onOpenDepositModal}
+        >
+          {!sidebarCollapsed && <span>Balance</span>}
+          <div
+            style={{
+              color: "#F7931A",
+              fontSize: "16px",
+              fontFamily: "'GohuFontuni11NerdFont', monospace",
+              background: "rgba(255, 255, 255, 0.05)",
+              padding: "4px 10px",
+              borderRadius: "4px",
+            }}
+          >
+            {sidebarCollapsed ? "₿" : `₿ ${formatBalance(balance || 0)}`}
+          </div>
+        </div>
+
+        {/* Chat Section */}
+        <div style={{ 
+          flexGrow: 1, 
+          display: "flex", 
+          flexDirection: "column",
+          overflow: "hidden",
+        }}>
+          {/* Chat Header */}
+          <div style={{
+            padding: "15px 20px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            fontFamily: "'GohuFontuni11NerdFont', monospace",
+            textAlign: sidebarCollapsed ? "center" : "left"
+          }}>
+            {sidebarCollapsed ? "C" : "CHAT"}
+          </div>
+
+          {/* Chat Messages Area */}
+          <div style={{ 
+            flexGrow: 1, 
+            overflowY: "auto",
+            padding: sidebarCollapsed ? "10px 5px" : "10px 20px",
+            fontSize: "14px"
+          }}>
+            {!sidebarCollapsed && (
+              <>
+                <div style={{ marginBottom: "15px", opacity: 0.8 }}>
+                  Welcome to the chat!
+                </div>
+                <div style={{ textAlign: "center", color: "#666", margin: "30px 0" }}>
+                  No messages yet
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          {!sidebarCollapsed && (
+            <div style={{ 
+              padding: "15px", 
+              borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              display: "flex"
+            }}>
+              <input
+                type="text"
+                placeholder="Type a message..."
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "none",
+                  padding: "10px 15px",
+                  color: "white",
+                  borderRadius: "4px",
+                  flexGrow: 1,
+                  marginRight: "8px",
+                  fontFamily: "'GohuFontuni11NerdFont', monospace",
+                }}
+              />
+              <button
+                style={{
+                  background: "#F7931A",
+                  border: "none",
+                  color: "white",
+                  padding: "10px 20px",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontFamily: "'GohuFontuni11NerdFont', monospace",
+                }}
+              >
+                Send
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content - adjusted to respect sidebar width and center content better */}
+      <div style={{ 
+        marginLeft: sidebarCollapsed ? "60px" : "300px",
+        transition: "margin-left 0.3s ease",
+        width: sidebarCollapsed ? "calc(100% - 60px)" : "calc(100% - 300px)",
+      }}>
+        {/* Content container with adjusted padding/margins */}
+        <div style={{
+          paddingLeft: "5%",  // Reduced left padding to move content right
+          paddingRight: "5%", // Also reduced right padding for balance
+          maxWidth: "1600px", // Increased max width to allow content to expand more
+          margin: "0 auto",   // Center the content container
+          boxSizing: "border-box",
+        }}>
+          {/* Your existing main content */}
+          
+          {/* Active Games section with expanded width */}
+          <div style={{
+            marginTop: "40px",
+            width: "100%",    // Take full width of the container
+          }}>
+            <h2 style={{ 
+              fontFamily: "'GohuFontuni11NerdFont', monospace",
+              fontSize: "16px",
+              marginBottom: "20px",
+              color: "#f8a100"
+            }}>
+              Active Games
+            </h2>
+            
+            {/* Games table with expanded width */}
+            <div style={{
+              width: "100%",
+              overflowX: "auto", // Add horizontal scroll for small screens
+            }}>
+              {/* Your existing table content */}
+              {/* ... */}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 };

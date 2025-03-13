@@ -1154,6 +1154,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         <div style={{ 
           marginTop: "32px", 
           width: "100%",
+          marginLeft: "150px", // Added 150px margin to move the section right
         }}>
           {games.length === 0 ? (
             <div>
