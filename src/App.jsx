@@ -16,6 +16,7 @@ import UserProfile from "./components/UserProfile";
 import CoinflipModal from "./components/modals/CoinflipModal";
 import DepositModal from "./components/modals/DepositModal";
 import WithdrawModal from "./components/modals/WithdrawModal";
+import { isAdmin } from "./utils/adminUtils";
 
 // Wrapper for route debugging
 const RouteDebugger = ({ children }) => {
@@ -23,6 +24,8 @@ const RouteDebugger = ({ children }) => {
   console.log("Current route:", location.pathname);
   return children;
 };
+
+// Refresh trigger - timestamp: ${new Date().toISOString()}
 
 function App() {
   const [session, setSession] = useState(null);
@@ -34,6 +37,7 @@ function App() {
   const [currentGame, setCurrentGame] = useState(null);
   const [gameWinner, setGameWinner] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [activeGameCheckInterval, setActiveGameCheckInterval] = useState(null);
   const userInitializedRef = useRef(false); // Track if we've already initialized this user
 
@@ -379,12 +383,30 @@ function App() {
     return () => clearInterval(intervalId);
   }, [user, showCoinflipModal, currentGame, handleOpenCoinflipModal]);
 
+  // Check admin status
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        const adminStatus = await isAdmin();
+        setUserIsAdmin(adminStatus);
+      } else {
+        setUserIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user]);
+
   return (
     <Router>
       <div
         style={{
           minHeight: "100vh",
           color: "#e2e8f0",
+          margin: 0,
+          padding: 0,
+          paddingTop: 0,
+          backgroundColor: "#000",
         }}
       >
         <Header
@@ -405,7 +427,7 @@ function App() {
                       maxWidth: "1200px",
                       margin: "0 auto",
                       padding: "16px",
-                      paddingTop: "80px",
+                      paddingTop: "0",
                     }}
                   >
                     <Auth />
@@ -416,7 +438,7 @@ function App() {
                       maxWidth: "1200px",
                       margin: "0 auto",
                       padding: "16px",
-                      paddingTop: "80px",
+                      paddingTop: "0",
                     }}
                   >
                     <GameInterface

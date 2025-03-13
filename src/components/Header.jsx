@@ -792,6 +792,8 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
             <div style={{
               width: "100%",
               overflowX: "auto", // Add horizontal scroll for small screens
+              marginTop: "0",
+              paddingTop: "0",
             }}>
               {/* Your existing table content */}
               {/* ... */}

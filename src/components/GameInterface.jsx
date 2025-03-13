@@ -1062,46 +1062,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         marginTop: "0",
         paddingTop: "0",
       }}>
-        <h1
-          style={{ 
-            fontSize: "32px", 
-            marginTop: "0", 
-            marginBottom: "16px", 
-            color: "#FFA500",
-            paddingTop: "5px", // Minimal padding to prevent text from touching the top edge
-          }}
-        >
-          Bitcoin Coinflip
-        </h1>
-
-        {/* Wager Input */}
-        <div style={{ marginBottom: "24px" }}>
-          <input
-            type="number"
-            id="wager-amount"
-            style={{
-              width: "100px",
-              opacity: loading || !user ? 0.5 : 1,
-              padding: "12px 24px",
-              borderRadius: "4px",
-              marginRight: "0px",
-              textAlign: "center",
-              WebkitAppearance: "none",
-              MozAppearance: "textfield",
-              fontFamily: "'GohuFontuni11NerdFont', monospace",
-              backgroundColor: "white",
-              color: "black",
-            }}
-            placeholder="Enter Amount"
-            min={MIN_WAGER}
-            max={MAX_WAGER}
-            value={wagerAmount}
-            onChange={(e) => setWagerAmount(e.target.value)}
-            disabled={loading || !user}
-          />
-        </div>
-
-        {/* Error Message */}
+        {/* Error Message - keep this outside the games list */}
         {error && (
           <div
             style={{
@@ -1141,24 +1102,6 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <button
-          onClick={createGame}
-          disabled={loading || !user}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: "#FFA500",
-            color: "white",
-            borderRadius: "4px",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading || !user ? 0.5 : 1,
-            border: "none",
-            fontFamily: "'GohuFontuni11NerdFont', monospace"
-          }}
-        >
-          Create Game
-        </button>
-
         {/* Games List - Updated for responsive positioning with sidebar consideration */}
         <div style={{ 
           marginTop: "32px", 
@@ -1178,22 +1121,150 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                 width: "100%",
               }}>
                 <div style={{ 
-                  textAlign: "left", 
-                  marginBottom: "16px",
-                  color: "#FFA500",
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  display: "inline-block",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                  fontFamily: "'GohuFontuni11NerdFont', monospace",
-                  gridColumn: "1",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  width: "100%",
+                  marginBottom: "8px",
                 }}>
-                  Active Games
+                  {/* Active Games Label */}
+                  <div style={{ 
+                    color: "rgba(255, 255, 255, 0.36)",
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    display: "inline-block",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    fontFamily: "'GohuFontuni11NerdFont', monospace",
+                  }}>
+                    Active Games
+                  </div>
+                  
+                  {/* Input and Button Container */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "16px",
+                  }}>
+                    {/* Wager Input */}
+                    <input
+                      type="number"
+                      id="wager-amount"
+                      style={{
+                        width: "100px",
+                        opacity: loading || !user ? 0.5 : 1,
+                        padding: "12px 24px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                        WebkitAppearance: "none",
+                        MozAppearance: "textfield",
+                        fontFamily: "'GohuFontuni11NerdFont', monospace",
+                        backgroundColor: "rgba(255, 255, 255, 0.9)",
+                        color: "#000000",
+                        border: "2px solid #FFA500",
+                      }}
+                      placeholder="Enter Amount"
+                      min={MIN_WAGER}
+                      max={MAX_WAGER}
+                      value={wagerAmount}
+                      onChange={(e) => setWagerAmount(e.target.value)}
+                      disabled={loading || !user}
+                    />
+                    
+                    {/* Create Game Button */}
+                    <button
+                      onClick={createGame}
+                      disabled={loading || !user}
+                      style={{
+                        fontSize: "12px",
+                        padding: "12px 24px",
+                        backgroundColor: "#FFA500",
+                        color: "white",
+                        borderRadius: "4px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        opacity: loading || !user ? 0.5 : 1,
+                        border: "none",
+                        fontFamily: "'GohuFontuni11NerdFont', monospace"
+                      }}
+                    >
+                      Create Game
+                    </button>
+                  </div>
                 </div>
                 <p style={{ color: "#ffffff", textAlign: "center", textShadow: "0 0 4px rgba(0,0,0,0.7)", marginTop: "16px" }}>No active games. Create one!</p>
               </div>
             ) : (
               <div style={{ width: "100%" }}>
+                <div style={{ 
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  width: "100%",
+                  marginBottom: "8px",
+                }}>
+                  {/* Active Games Label */}
+                  <div style={{ 
+                    color: "rgb(255, 255, 255)",
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    display: "inline-block",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    fontFamily: "'GohuFontuni11NerdFont', monospace",
+                  }}>
+                    Active Games
+                  </div>
+                  
+                  {/* Input and Button Container */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "16px",
+                  }}>
+                    {/* Wager Input */}
+                    <input
+                      type="number"
+                      id="wager-amount"
+                      style={{
+                        width: "100px",
+                        opacity: loading || !user ? 0.5 : 1,
+                        padding: "12px 24px",
+                        borderRadius: "4px",
+                        textAlign: "center",
+                        WebkitAppearance: "none",
+                        MozAppearance: "textfield",
+                        fontFamily: "'GohuFontuni11NerdFont', monospace",
+                        backgroundColor: "rgba(255, 255, 255, 0.9)",
+                        color: "#000000",
+                        border: "2px solid #FFA500",
+                      }}
+                      placeholder="Enter Amount"
+                      min={MIN_WAGER}
+                      max={MAX_WAGER}
+                      value={wagerAmount}
+                      onChange={(e) => setWagerAmount(e.target.value)}
+                      disabled={loading || !user}
+                    />
+                    
+                    {/* Create Game Button */}
+                    <button
+                      onClick={createGame}
+                      disabled={loading || !user}
+                      style={{
+                        padding: "12px 24px",
+                        backgroundColor: "#FFA500",
+                        color: "white",
+                        borderRadius: "4px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        opacity: loading || !user ? 0.5 : 1,
+                        border: "none",
+                        fontFamily: "'GohuFontuni11NerdFont', monospace"
+                      }}
+                    >
+                      Create Game
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Column Headers */}
                 <div style={{ 
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
@@ -1201,9 +1272,9 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                   width: "100%",
                   marginBottom: "8px",
                 }}>
-                  {/* Column 1: Mode Label + Active Games */}
+                  {/* Column 1: Mode */}
                   <div style={{ 
-                    color: "rgb(255, 255, 255)",
+                    color: "white",
                     padding: "8px 16px",
                     borderRadius: "4px",
                     display: "inline-block",
@@ -1212,7 +1283,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                     gridColumn: "1",
                     marginBottom: "0",
                   }}>
-                    Active Games
+                    Mode
                   </div>
                   
                   {/* Empty spaces for other columns */}
@@ -1224,6 +1295,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                   <div></div>
                 </div>
                 
+                {/* Game rows */}
                 {games.map((game) => (
                   <div key={game.id} style={{
                     color: "white",
@@ -1231,7 +1303,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                     overflow: "hidden",
                     marginBottom: "16px",
                     width: "100%",
-                    background: "rgba(0, 0, 0, 0.5)", // Added semi-transparent black background
+                    background: "rgba(0, 0, 0, 0.5)",
                   }}>
                     {/* Horizontal structure with 6 columns and action button */}
                     <div style={{ 

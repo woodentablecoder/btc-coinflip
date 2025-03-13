@@ -147,6 +147,7 @@ const UserProfile = ({ user }) => {
       justifyContent: 'center', 
       minHeight: '90vh',
       padding: '20px',
+      paddingTop: '0',
       color: 'white'
     }}>
       <div style={{ 

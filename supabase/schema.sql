@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- User roles table for admin access
+CREATE TABLE IF NOT EXISTS public.user_roles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'user')),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, role)
+);
+
 -- Games table
 CREATE TABLE IF NOT EXISTS public.games (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -31,6 +40,14 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   status TEXT CHECK (status IN ('pending', 'completed', 'failed')),
   tx_hash TEXT, -- Blockchain transaction hash when applicable
   created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Settings table for app-wide settings like message of the day
+CREATE TABLE IF NOT EXISTS public.settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Function to update balance
@@ -58,6 +75,13 @@ $$ LANGUAGE plpgsql;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+
+-- Insert default message of the day
+INSERT INTO public.settings (key, value)
+VALUES ('message_of_the_day', 'Welcome to Bitcoin CoinFlip! Try your luck today.')
+ON CONFLICT (key) DO NOTHING;
 
 -- Policy for users table
 CREATE POLICY "Users can view their own data" ON users
@@ -90,6 +114,22 @@ CREATE POLICY "System can insert transactions" ON transactions
   FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
+
+-- Admin can read and write all settings
+CREATE POLICY "Admins can do everything on settings" ON public.settings
+    USING (EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin'
+    ))
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin'
+    ));
+
+-- All users can read settings
+CREATE POLICY "All users can read settings" ON public.settings
+    FOR SELECT
+    USING (true);
 
 -- Create a trigger to cleanup old games
 CREATE OR REPLACE FUNCTION cleanup_old_games()
