@@ -755,8 +755,9 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
   };
 
   const containerStyle = {
-    maxWidth: "40%",
-    margin: "96px auto 0",
+    maxWidth: "100%",
+    width: "100%",
+    margin: "20px auto 0",
     padding: "24px",
     backgroundColor: "#f3f4f6",
     borderRadius: "8px",
@@ -884,8 +885,21 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={{ textAlign: "center" }}>
+    <div style={{
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "20px",
+      backgroundColor: "#EEF1F4", // Light blue-gray background matching screenshot
+    }}>
+      <div style={{ 
+        width: "100%", 
+        maxWidth: "1200px", // Maximum width for very large screens
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center"
+      }}>
         <h1
           style={{ fontSize: "24px", marginBottom: "16px", color: "#FFA500" }}
         >
@@ -906,6 +920,9 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
               WebkitAppearance: "none",
               MozAppearance: "textfield",
               fontFamily: "monospace",
+              backgroundColor: "#262D3A", // Dark input background
+              color: "white",
+              border: "none",
             }}
             placeholder="Enter Amount"
             min={MIN_WAGER}
@@ -928,6 +945,8 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              width: "100%",
+              maxWidth: "600px",
             }}
           >
             <div>{error}</div>
@@ -956,57 +975,144 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         <button
           onClick={createGame}
           disabled={loading || !user}
-          style={buttonStyle}
+          style={{
+            padding: "12px 24px",
+            backgroundColor: "#FFA500",
+            color: "white",
+            borderRadius: "4px",
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading || !user ? 0.5 : 1,
+            border: "none",
+          }}
         >
           Create Game
         </button>
 
         {/* Games List */}
-        <div style={{ marginTop: "32px" }}>
+        <div style={{ 
+          marginTop: "32px", 
+          width: "100%",
+        }}>
           <h2
-            style={{ fontSize: "20px", marginBottom: "16px", color: "#FFA500" }}
+            style={{ fontSize: "20px", marginBottom: "16px", color: "#FFA500", textAlign: "center" }}
           >
             Active Games
           </h2>
 
           {games.length === 0 ? (
-            <p style={{ color: "#6b7280" }}>No active games. Create one!</p>
+            <p style={{ color: "#6b7280", textAlign: "center" }}>No active games. Create one!</p>
           ) : (
-            <div>
+            <div style={{ width: "100%" }}>
               {games.map((game) => (
-                <div key={game.id} style={gameItemStyle}>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: "bold" }}>
-                      {formatSatoshis(game.wager_amount)}
-                    </span>
-                    <span style={{ fontSize: "14px", color: "#6b7280" }}>
-                      Created {new Date(game.created_at).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div>
-                    {game.player1_id === user?.id ? (
-                      <button
-                        onClick={() => cancelGame(game.id)}
-                        disabled={loading}
-                        style={{
-                          ...cancelButtonStyle,
-                          opacity: loading ? 0.5 : 1,
-                        }}
-                      >
-                        Cancel Game
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => joinGame(game.id)}
-                        disabled={loading}
-                        style={{
-                          ...joinButtonStyle,
-                          opacity: loading ? 0.5 : 1,
-                        }}
-                      >
-                        Join Game
-                      </button>
-                    )}
+                <div key={game.id} style={{
+                  backgroundColor: "#1A1E2A", // Dark blue-black background
+                  color: "white",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  marginBottom: "16px",
+                  width: "100%",
+                }}>
+                  {/* Horizontal structure with 6 columns and action button */}
+                  <div style={{ 
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
+                    alignItems: "center",
+                    width: "100%",
+                  }}>
+                    {/* Column 1: Mode */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Mode</div>
+                      <div>Coinflip</div>
+                    </div>
+
+                    {/* Column 2: User */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>User</div>
+                      <div style={{ color: "#FFA500" }}>#{game.id.substring(0, 8)}</div>
+                    </div>
+
+                    {/* Column 3: Time */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Time</div>
+                      <div>{new Date(game.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</div>
+                    </div>
+
+                    {/* Column 4: Value */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
+                      <div>₿ {game.wager_amount}</div>
+                    </div>
+
+                    {/* Column 5: Multiplier */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Multiplier</div>
+                      <div>2x</div>
+                    </div>
+
+                    {/* Column 6: Team */}
+                    <div style={{ 
+                      padding: "16px",
+                      borderRight: "1px solid #374151",
+                    }}>
+                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Team</div>
+                      <div>{game.id.charCodeAt(0) % 2 === 0 ? "Heads" : "Tails"}</div>
+                    </div>
+
+                    {/* Action button */}
+                    <div style={{ 
+                      padding: "16px",
+                    }}>
+                      {game.player1_id === user?.id ? (
+                        <button
+                          onClick={() => cancelGame(game.id)}
+                          disabled={loading}
+                          style={{
+                            backgroundColor: "#ef4444",
+                            color: "white",
+                            borderRadius: "4px",
+                            padding: "8px 16px",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            opacity: loading ? 0.5 : 1,
+                            whiteSpace: "nowrap",
+                            border: "none",
+                          }}
+                        >
+                          Cancel Game
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => joinGame(game.id)}
+                          disabled={loading}
+                          style={{
+                            backgroundColor: "#10b981",
+                            color: "white",
+                            borderRadius: "4px",
+                            padding: "8px 16px",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            opacity: loading ? 0.5 : 1,
+                            whiteSpace: "nowrap",
+                            border: "none",
+                          }}
+                        >
+                          Join Game
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

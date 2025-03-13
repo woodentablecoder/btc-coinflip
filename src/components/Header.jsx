@@ -19,7 +19,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
 
   const formatBalance = (balanceInSatoshis) => {
     // Format the balance with space separators as per spec
-    return `₿ ${
+    return `${
       balanceInSatoshis
         ? balanceInSatoshis.toLocaleString("en-US").replace(/,/g, " ")
         : "0"
@@ -42,97 +42,90 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
         top: 0,
         left: 0,
         width: "100%",
-        backgroundColor: "#1A1C24",
+        backgroundColor: "transparent",
         color: "white",
-        padding: "12px 24px 12px 24px",
+        padding: "12px 24px",
         zIndex: 1000,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
         boxSizing: "border-box",
         ...baseStyle,
       }}
     >
-      {/* Left Section - Logo/Title */}
+      {/* Left Section - Scrappy Casino Logo/Title */}
       <div style={{ display: "flex", alignItems: "center" }}>
-        <a
-          href="/"
+        <Link
+          to="/"
           style={{
-            padding: "8px 8px 8px 0",
             fontWeight: "bold",
             cursor: "pointer",
-            whiteSpace: "nowrap",
             textDecoration: "none",
             color: "inherit",
+            display: "flex",
+            alignItems: "center",
             ...baseStyle,
           }}
         >
-          Coinflip
-        </a>
+          <span style={{ color: "white", fontSize: "22px" }}>satoshi</span>
+          <span style={{ color: "#4dabf5", fontStyle: "italic", fontSize: "22px", marginLeft: "4px" }}>flip</span>
+        </Link>
       </div>
 
-      {/* Right Section - Always stay on one line */}
+      
+
+      {/* Right Section - Balance and Profile */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          marginLeft: "auto",
         }}
       >
-        {/* Deposit Button */}
-        <button
+        {/* Balance Display */}
+        <div
           onClick={onOpenDepositModal}
           style={{
             display: "flex",
             alignItems: "center",
-            backgroundColor: "#FFA500",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            padding: "8px 12px",
-            fontWeight: "bold",
-            cursor: "pointer",
-            marginRight: "16px",
-            whiteSpace: "nowrap",
-            ...baseStyle,
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="currentColor"
-            style={{ marginRight: "8px" }}
-          >
-            <path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-2 0H3V6h14v8zm-7-7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm13 0v11c0 1.1-.9 2-2 2H4v-2h17V7h2z" />
-          </svg>
-          Deposit
-        </button>
-
-        {/* Balance Display */}
-        <div
-          style={{
             marginRight: "16px",
             fontSize: "15px",
             fontWeight: "400",
-            color: "#FFA500",
-            whiteSpace: "nowrap",
+            color: "black",
+            background: "rgba(255, 255, 255, 0.2)",
+            padding: "8px 16px",
+            borderRadius: "16px",
+            boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            "&:hover": {
+              background: "rgba(255, 255, 255, 0.25)",
+            },
             ...baseStyle,
           }}
         >
+          <span style={{ 
+            display: "inline-flex",
+            alignItems: "center", 
+            justifyContent: "center", 
+            backgroundColor: "#FFA500", 
+            borderRadius: "50%", 
+            width: "16px", 
+            height: "16px",
+            marginRight: "8px",
+            fontSize: "12px"
+          }}>₿</span>
           {formatBalance(balance || 0)}
         </div>
 
-        {/* User Profile - Just profile picture */}
+        {/* User Profile */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             cursor: "pointer",
-            paddingRight: "8px",
-            ...baseStyle,
           }}
         >
           <div
@@ -140,31 +133,50 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
               width: "32px",
               height: "32px",
               borderRadius: "50%",
-              backgroundColor: "#FFA500",
+              backgroundColor: "#8a2be2", // Purple color for avatar
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
               overflow: "hidden",
-              flexShrink: 0,
+              padding: "6px 6px",
             }}
           >
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
+            {user && user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt="Profile"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            )}
           </div>
+          {/* Dropdown Arrow */}
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 24 24" 
+            fill="white" 
+            style={{ marginLeft: "6px" }}
+          >
+            <path d="M7 10l5 5 5-5z" />
+          </svg>
         </div>
 
+        {/* Admin Button (Hidden by default, only visible for admin users) */}
         {user && userIsAdmin && (
           <Link
             to="/admin"
             style={{
               color: "white",
               textDecoration: "none",
-              marginLeft: "8px",
+              marginLeft: "14px",
               fontWeight: "bold",
               padding: "8px 16px",
-              backgroundColor: "#2563eb",
-              borderRadius: "4px",
+              backgroundColor: "#333740",
+              borderRadius: "50px",
               ...baseStyle,
             }}
           >

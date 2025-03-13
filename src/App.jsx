@@ -299,7 +299,6 @@ function App() {
     <Router>
       <div
         style={{
-          backgroundColor: "#121317",
           minHeight: "100vh",
           color: "#e2e8f0",
         }}
