@@ -1,0 +1,244 @@
+/* CoinflipGame.css */
+/* Add a comment to make sure the file gets updated */
+.coinflip-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* min-height: 100vh could be causing layout issues if it pushes content off-screen */
+  min-height: calc(100vh - 80px); /* Adjust for header */
+  background: linear-gradient(to bottom right, #0F2124, rgba(15, 33, 36, 0.31), rgba(63, 209, 69, 0));
+  color: #FFFFFF;
+  padding: 20px;
+  margin-top: 60px; /* Add margin to account for fixed header */
+}
+
+/* Error message */
+.error-message {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  margin: 100px auto;
+  max-width: 600px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Page title styles */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dice-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-title h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Active Games section */
+.active-games-section {
+  background-color: #1A393E;
+  border-radius: 8px 8px 0 0;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.games-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.games-header h2 {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  color: #FFFFFF;
+}
+
+/* Games table */
+.games-table {
+  width: 100%;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  padding: 10px 20px;
+  background-color: rgba(26, 57, 62, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.table-header > div {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: #B1BAD3;
+}
+
+.header-mode, .header-user {
+  text-align: left;
+}
+
+.header-time, .header-value {
+  text-align: center;
+}
+
+.header-multiplier, .header-winner {
+  text-align: right;
+}
+
+.table-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.game-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  align-items: center;
+}
+
+.game-row:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.game-mode {
+  font-family: 'GohuFont uni11 Nerd Font', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+.game-user {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: #B1BAD3;
+}
+
+.game-time {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  color: #B1BAD3;
+}
+
+.game-value {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  color: #FFB200;
+}
+
+.game-multiplier {
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  color: #4AFF59;
+}
+
+.multiply-symbol {
+  margin-right: 5px;
+}
+
+.game-winner {
+  text-align: right;
+}
+
+.join-button {
+  background-color: #3BFB82;
+  color: #0F2124;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 15px;
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.join-button:hover {
+  background-color: #2AEA71;
+}
+
+.no-games {
+  padding: 20px;
+  text-align: center;
+  color: #B1BAD3;
+  font-family: 'GohuFont 14 Nerd Font', monospace;
+  font-size: 14px;
+}
+
+/* Game controls */
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.game-coin-display {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  margin-bottom: 30px;
+}
+
+.coin {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coin.heads {
+  background-color: #FFB200;
+}
+
+.coin.tails {
+  background-color: #3BFB82;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-header, .game-row {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  
+  .header-time, .header-value, .game-time, .game-value {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-header, .game-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .header-multiplier, .game-multiplier {
+    display: none;
+  }
+} 

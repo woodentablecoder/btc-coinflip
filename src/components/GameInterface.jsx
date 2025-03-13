@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import supabase from "../supabase";
 
 const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
@@ -7,12 +7,27 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [executedGames, setExecutedGames] = useState(new Set());
+  const [usernames, setUsernames] = useState({}); // Store mapping of user IDs to usernames
+  const fetchTimeoutRef = useRef(null);
+  const lastFetchTimeRef = useRef(0);
+  const lastRealtimeCheckRef = useRef(0);
+  const gamesSubscriptionRef = useRef(null);
+  const activeSpecialChannelsRef = useRef({});
 
   const MIN_WAGER = 100; // ₿ 100 satoshis
   const MAX_WAGER = 100000000; // ₿ 100 000 000 satoshis
 
   // Function to check Supabase realtime status
   const checkRealtimeStatus = async () => {
+    // Rate limit realtime checks to at most once every 30 seconds
+    const now = Date.now();
+    if (now - lastRealtimeCheckRef.current < 30000) {
+      console.log("Skipping realtime check - checked recently");
+      return;
+    }
+    
+    lastRealtimeCheckRef.current = now;
+    
     try {
       console.log("Checking Supabase realtime status...");
       // Create a test channel with a simple listener
@@ -44,6 +59,27 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
     checkRealtimeStatus();
 
     const fetchGames = async () => {
+      // Implement debouncing - only fetch if it's been at least 3 seconds since last fetch
+      const now = Date.now();
+      if (now - lastFetchTimeRef.current < 3000) {
+        console.log("Debouncing GameInterface fetchGames call - too frequent");
+        
+        // Clear any existing timeout
+        if (fetchTimeoutRef.current) {
+          clearTimeout(fetchTimeoutRef.current);
+        }
+        
+        // Set a new timeout
+        fetchTimeoutRef.current = setTimeout(() => {
+          console.log("Executing delayed GameInterface fetchGames call");
+          fetchGames();
+        }, 3000 - (now - lastFetchTimeRef.current));
+        
+        return;
+      }
+      
+      lastFetchTimeRef.current = now;
+      
       try {
         console.log("Fetching active games...");
         const { data, error } = await supabase
@@ -59,6 +95,11 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
 
         console.log(`Found ${data?.length || 0} active games:`, data);
         setGames(data || []);
+
+        // Fetch usernames for game creators
+        if (data && data.length > 0) {
+          fetchUsernames(data.map(game => game.player1_id));
+        }
 
         // IMPORTANT: Check for active games that involve this user
         // This is the key fix for ensuring coinflip shows for both players
@@ -95,176 +136,191 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
     // Initial fetch
     fetchGames();
 
-    // Subscribe to changes - using a more specific channel name
+    // Keep track of subscription status to avoid recreating it unnecessarily
     const channelName = "games-changes";
 
-    console.log(
-      `Setting up realtime subscription with channel: ${channelName}`
-    );
+    // Set up subscription only if we don't already have one
+    if (!gamesSubscriptionRef.current) {
+      console.log(`Setting up realtime subscription with channel: ${channelName}`);
 
-    // Create a single channel with multiple event listeners
-    const gamesSubscription = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "games",
-        },
-        (payload) => {
-          console.log("Game INSERT detected:", payload);
-          // Add the new game to the list if it's pending
-          if (payload.new?.status === "pending") {
-            console.log("Adding new game to UI:", payload.new.id);
-            setGames((prevGames) => {
-              // Check if the game already exists in the list to avoid duplicates
-              const exists = prevGames.some((g) => g.id === payload.new.id);
-              if (!exists) {
-                return [payload.new, ...prevGames];
-              }
-              return prevGames;
-            });
-          } else {
-            console.log("Ignoring non-pending INSERT event");
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "games",
-        },
-        (payload) => {
-          console.log("Game UPDATE detected:", payload);
-          if (!payload.new) {
-            console.warn("Update payload missing .new property");
-            return;
-          }
-
-          // Extra debugging for game state changes
-          console.log("Game state change:", {
-            oldStatus: payload.old?.status,
-            newStatus: payload.new.status,
-            currentUserId: user?.id,
-            player1Id: payload.new.player1_id,
-            player2Id: payload.new.player2_id,
-            isCreator: payload.new.player1_id === user?.id,
-            isJoiner: payload.new.player2_id === user?.id,
-          });
-
-          // If game status changed from pending to active
-          if (
-            payload.new.status === "active" &&
-            payload.old?.status === "pending"
-          ) {
-            // Check if current user is involved in this game (either creator or joiner)
-            if (
-              payload.new.player1_id === user?.id ||
-              payload.new.player2_id === user?.id
-            ) {
-              console.log("Game joined, showing coinflip to player:", {
-                gameId: payload.new.id,
-                isCreator: payload.new.player1_id === user?.id,
-                isJoiner: payload.new.player2_id === user?.id,
+      // Create a single channel with multiple event listeners
+      gamesSubscriptionRef.current = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "games",
+          },
+          (payload) => {
+            console.log("Game INSERT detected:", payload);
+            if (payload.new?.status === "pending") {
+              console.log("Adding new game to UI:", payload.new.id);
+              setGames((prevGames) => {
+                // Check if the game already exists in the list to avoid duplicates
+                const exists = prevGames.some((g) => g.id === payload.new.id);
+                if (!exists) {
+                  // Fetch username for the creator of this new game
+                  fetchUsernames([payload.new.player1_id]);
+                  return [payload.new, ...prevGames];
+                }
+                return prevGames;
               });
-
-              // Show the coinflip modal
-              onOpenCoinflipModal(payload.new);
-
-              // Execute the coinflip after a delay
-              setTimeout(() => {
-                console.log("Executing coinflip for game:", payload.new.id);
-                executeCoinflip(payload.new);
-              }, 3000);
+            } else {
+              console.log("Ignoring non-pending INSERT event");
             }
           }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "games",
+          },
+          (payload) => {
+            console.log("Game UPDATE detected:", payload);
+            if (!payload.new) {
+              console.warn("Update payload missing .new property");
+              return;
+            }
 
-          // Remove games that are no longer pending
-          if (payload.new.status !== "pending") {
-            console.log(
-              "Removing game that is no longer pending:",
-              payload.new.id
-            );
-            setGames((prevGames) =>
-              prevGames.filter((g) => g.id !== payload.new.id)
-            );
-          }
-          // Update game data if it's still pending
-          else {
-            console.log("Updating existing pending game:", payload.new.id);
-            setGames((prevGames) => {
-              const gameExists = prevGames.some((g) => g.id === payload.new.id);
-              if (gameExists) {
-                return prevGames.map((g) =>
-                  g.id === payload.new.id ? payload.new : g
-                );
-              } else {
-                // If the game doesn't exist but should be in the list, add it
-                return [payload.new, ...prevGames];
-              }
+            // Extra debugging for game state changes
+            console.log("Game state change:", {
+              oldStatus: payload.old?.status,
+              newStatus: payload.new.status,
+              currentUserId: user?.id,
+              player1Id: payload.new.player1_id,
+              player2Id: payload.new.player2_id,
+              isCreator: payload.new.player1_id === user?.id,
+              isJoiner: payload.new.player2_id === user?.id,
             });
+
+            // If game status changed from pending to active
+            if (
+              payload.new.status === "active" &&
+              payload.old?.status === "pending"
+            ) {
+              // Check if current user is involved in this game (either creator or joiner)
+              if (
+                payload.new.player1_id === user?.id ||
+                payload.new.player2_id === user?.id
+              ) {
+                console.log("Game joined, showing coinflip to player:", {
+                  gameId: payload.new.id,
+                  isCreator: payload.new.player1_id === user?.id,
+                  isJoiner: payload.new.player2_id === user?.id,
+                });
+
+                // Show the coinflip modal
+                onOpenCoinflipModal(payload.new);
+
+                // Execute the coinflip after a delay
+                setTimeout(() => {
+                  console.log("Executing coinflip for game:", payload.new.id);
+                  executeCoinflip(payload.new);
+                }, 3000);
+              }
+            }
+
+            // Remove games that are no longer pending
+            if (payload.new.status !== "pending") {
+              console.log(
+                "Removing game that is no longer pending:",
+                payload.new.id
+              );
+              setGames((prevGames) =>
+                prevGames.filter((g) => g.id !== payload.new.id)
+              );
+            }
+            // Update game data if it's still pending
+            else {
+              console.log("Updating existing pending game:", payload.new.id);
+              setGames((prevGames) => {
+                const gameExists = prevGames.some((g) => g.id === payload.new.id);
+                if (gameExists) {
+                  return prevGames.map((g) =>
+                    g.id === payload.new.id ? payload.new : g
+                  );
+                } else {
+                  // If the game doesn't exist but should be in the list, add it
+                  // Fetch username for the creator
+                  fetchUsernames([payload.new.player1_id]);
+                  return [payload.new, ...prevGames];
+                }
+              });
+            }
           }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "games",
-        },
-        (payload) => {
-          console.log("Game DELETE detected:", payload);
-          if (payload.old?.id) {
-            console.log("Removing deleted game from UI:", payload.old.id);
-            setGames((prevGames) =>
-              prevGames.filter((g) => g.id !== payload.old.id)
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "DELETE",
+            schema: "public",
+            table: "games",
+          },
+          (payload) => {
+            console.log("Game DELETE detected:", payload);
+            if (payload.old?.id) {
+              console.log("Removing deleted game from UI:", payload.old.id);
+              setGames((prevGames) =>
+                prevGames.filter((g) => g.id !== payload.old.id)
+              );
+            } else {
+              console.warn("Delete payload missing .old.id property");
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          if (err) {
+            console.error(`Error subscribing to ${channelName}:`, err);
+          }
+
+          // Only log meaningful status changes - the CLOSED status is expected during normal lifecycle
+          if (status !== "CLOSED") {
+            console.log(`Subscription status for ${channelName}:`, status);
+          }
+
+          if (status === "SUBSCRIBED") {
+            console.log(`✅ Successfully subscribed to ${channelName}`);
+          } else if (status === "TIMED_OUT") {
+            console.warn(`⚠️ Subscription timed out for ${channelName}`);
+            // Use the existing polling mechanism with debouncing instead of creating a new one
+          } else if (status === "CHANNEL_ERROR") {
+            console.error(`❌ Channel error for ${channelName}`);
+            // Use the existing polling mechanism with debouncing instead of creating a new one
+          } else if (status !== "SUBSCRIBED" && status !== "CLOSED") {
+            // Don't warn about CLOSED status - it's part of normal component lifecycle
+            console.warn(
+              `⚠️ Unexpected subscription status for ${channelName}: ${status}`
             );
-          } else {
-            console.warn("Delete payload missing .old.id property");
+            // Use the existing polling mechanism with debouncing instead of creating a new one
           }
-        }
-      )
-      .subscribe((status, err) => {
-        if (err) {
-          console.error(`Error subscribing to ${channelName}:`, err);
-        }
+        });
+    }
 
-        console.log(`Subscription status for ${channelName}:`, status);
-
-        if (status === "SUBSCRIBED") {
-          console.log(`✅ Successfully subscribed to ${channelName}`);
-        } else if (status === "TIMED_OUT") {
-          console.warn(`⚠️ Subscription timed out for ${channelName}`);
-          // Fallback to polling if subscription times out
-          const intervalId = setInterval(fetchGames, 500);
-          return () => clearInterval(intervalId);
-        } else if (status === "CHANNEL_ERROR") {
-          console.error(`❌ Channel error for ${channelName}`);
-          // Fallback to polling on channel error
-          const intervalId = setInterval(fetchGames, 500);
-          return () => clearInterval(intervalId);
-        } else if (status !== "SUBSCRIBED") {
-          console.warn(
-            `⚠️ Unexpected subscription status for ${channelName}: ${status}`
-          );
-          // Fallback to polling if subscription fails
-          const intervalId = setInterval(fetchGames, 500);
-          return () => clearInterval(intervalId);
-        }
-      });
-
-    // Fallback: Set up periodic polling even if subscription seems to work
+    // Fallback: Set up periodic polling at a reasonable interval
     // This ensures we always have up-to-date data even if realtime events are missed
-    const pollIntervalId = setInterval(fetchGames, 830);
+    const pollIntervalId = setInterval(() => {
+      // Only log this if we're not debouncing
+      if (Date.now() - lastFetchTimeRef.current >= 3000) {
+        console.log("Running scheduled poll for games");
+      }
+      fetchGames();
+    }, 10000); // Increased to 10 seconds
 
     // Cleanup subscription and polling on unmount
     return () => {
-      console.log(`Cleaning up realtime subscription for ${channelName}`);
-      supabase.removeChannel(gamesSubscription);
+      // Don't log cleanup messages during normal component lifecycle
+      // This reduces console noise
+      if (gamesSubscriptionRef.current) {
+        supabase.removeChannel(gamesSubscriptionRef.current);
+        gamesSubscriptionRef.current = null;
+      }
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
       clearInterval(pollIntervalId);
     };
   }, [user]);
@@ -394,10 +450,20 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
       // This ensures the UI updates even if the subscription is delayed
       setGames((prevGames) => [data, ...prevGames]);
 
+      // Ensure we have the username for the creator
+      fetchUsernames([user.id]);
+
       setWagerAmount("");
 
       // Set up a special listener just for this game to detect when it becomes active
+      // Check if we already have a special channel for this game
+      if (activeSpecialChannelsRef.current[data.id]) {
+        console.log(`Special channel for game ${data.id} already exists`);
+        return;
+      }
+
       console.log("Setting up special listener for created game:", data.id);
+      
       const createdGameChannel = supabase
         .channel(`game-${data.id}-status`)
         .on(
@@ -427,6 +493,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
 
               // Close the channel as we don't need it anymore
               supabase.removeChannel(createdGameChannel);
+              delete activeSpecialChannelsRef.current[data.id];
 
               // Show the coinflip modal to the creator
               onOpenCoinflipModal(payload.new);
@@ -449,10 +516,16 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
           );
         });
 
+      // Store the channel reference
+      activeSpecialChannelsRef.current[data.id] = createdGameChannel;
+
       // Clean up this special channel after 5 minutes if no one joins
       setTimeout(() => {
-        supabase.removeChannel(createdGameChannel);
-        console.log("Cleaned up special creator channel for game:", data.id);
+        if (activeSpecialChannelsRef.current[data.id]) {
+          supabase.removeChannel(activeSpecialChannelsRef.current[data.id]);
+          delete activeSpecialChannelsRef.current[data.id];
+          console.log("Cleaned up special creator channel for game:", data.id);
+        }
       }, 300000); // 5 minutes
     } catch (err) {
       console.error("Create game error:", err);
@@ -573,6 +646,9 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         // Non-fatal error, just log it
         console.warn("Failed to create creator notification:", err);
       }
+
+      // Fetch usernames for both players
+      fetchUsernames([updatedGame.player1_id, updatedGame.player2_id]);
 
       // Open the coinflip modal with the updated game data
       console.log("Joiner directly opening coinflip modal for game:", {
@@ -884,6 +960,57 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
     }
   };
 
+  // Function to fetch usernames for a list of user IDs
+  const fetchUsernames = async (userIds) => {
+    // Remove duplicates from userIds
+    const uniqueUserIds = [...new Set(userIds)];
+    
+    // Filter out userIds that we already have in our state
+    const missingUserIds = uniqueUserIds.filter(id => !usernames[id]);
+    
+    if (missingUserIds.length === 0) return;
+    
+    try {
+      console.log("Fetching usernames for users:", missingUserIds);
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, username")
+        .in("id", missingUserIds);
+        
+      if (error) {
+        console.error("Error fetching usernames:", error);
+        return;
+      }
+      
+      // Create a new mapping of user IDs to usernames
+      const newUsernames = {};
+      data.forEach(user => {
+        newUsernames[user.id] = user.username || `User_${user.id.substr(0, 6)}`;
+      });
+      
+      // Update the usernames state with the new mappings
+      setUsernames(prev => ({...prev, ...newUsernames}));
+    } catch (err) {
+      console.error("Error in fetchUsernames:", err);
+    }
+  };
+
+  // Add cleanup for all active special channels
+  useEffect(() => {
+    // Clean up all active special channels when component unmounts
+    return () => {
+      Object.keys(activeSpecialChannelsRef.current).forEach(gameId => {
+        try {
+          supabase.removeChannel(activeSpecialChannelsRef.current[gameId]);
+          console.log(`Cleaned up special channel for game ${gameId} on unmount`);
+        } catch (err) {
+          console.error(`Error cleaning up special channel for game ${gameId}:`, err);
+        }
+      });
+      activeSpecialChannelsRef.current = {};
+    };
+  }, []);
+
   return (
     <div style={{
       width: "100%",
@@ -891,7 +1018,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
       flexDirection: "column",
       alignItems: "center",
       padding: "20px",
-      backgroundColor: "#EEF1F4", // Light blue-gray background matching screenshot
+      backgroundColor: "transparent", // Changed from "#EEF1F4" to transparent
     }}>
       <div style={{ 
         width: "100%", 
@@ -901,7 +1028,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
         alignItems: "center"
       }}>
         <h1
-          style={{ fontSize: "24px", marginBottom: "16px", color: "#FFA500" }}
+          style={{ fontSize: "32px", marginBottom: "16px", color: "#FFA500" }}
         >
           Bitcoin Coinflip
         </h1>
@@ -913,16 +1040,16 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
             id="wager-amount"
             style={{
               width: "100px",
-              padding: "8px",
+              opacity: loading || !user ? 0.5 : 1,
+              padding: "12px 24px",
               borderRadius: "4px",
               marginRight: "0px",
               textAlign: "center",
               WebkitAppearance: "none",
               MozAppearance: "textfield",
-              fontFamily: "monospace",
-              backgroundColor: "#262D3A", // Dark input background
-              color: "white",
-              border: "none",
+              fontFamily: "'GohuFontuni11NerdFont', monospace",
+              backgroundColor: "white",
+              color: "black",
             }}
             placeholder="Enter Amount"
             min={MIN_WAGER}
@@ -939,7 +1066,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
             style={{
               marginBottom: "16px",
               padding: "12px",
-              backgroundColor: "#fee2e2",
+              backgroundColor: "rgba(254, 226, 226, 0.3)", // Made semi-transparent
               color: "#b91c1c",
               borderRadius: "4px",
               display: "flex",
@@ -947,6 +1074,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
               alignItems: "center",
               width: "100%",
               maxWidth: "600px",
+              border: "1px solid rgba(220, 38, 38, 0.5)", // Added border for better visibility
             }}
           >
             <div>{error}</div>
@@ -963,6 +1091,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                   color: "white",
                   borderRadius: "4px",
                   fontSize: "14px",
+                  fontFamily: "'GohuFontuni11NerdFont', monospace"
                 }}
               >
                 Repair My Account
@@ -983,6 +1112,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
             cursor: loading ? "not-allowed" : "pointer",
             opacity: loading || !user ? 0.5 : 1,
             border: "none",
+            fontFamily: "'GohuFontuni11NerdFont', monospace"
           }}
         >
           Create Game
@@ -993,24 +1123,60 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
           marginTop: "32px", 
           width: "100%",
         }}>
-          <h2
-            style={{ fontSize: "20px", marginBottom: "16px", color: "#FFA500", textAlign: "center" }}
-          >
-            Active Games
-          </h2>
-
           {games.length === 0 ? (
-            <p style={{ color: "#6b7280", textAlign: "center" }}>No active games. Create one!</p>
+            <div>
+              <div style={{ 
+                textAlign: "left", 
+                marginBottom: "16px",
+                color: "#FFA500",
+                padding: "8px 16px",
+                borderRadius: "4px",
+                display: "inline-block",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                fontFamily: "'GohuFontuni11NerdFont', monospace",
+              }}>
+                Active Games
+              </div>
+              <p style={{ color: "#ffffff", textAlign: "center", textShadow: "0 0 4px rgba(0,0,0,0.7)", marginTop: "16px" }}>No active games. Create one!</p>
+            </div>
           ) : (
             <div style={{ width: "100%" }}>
+              <div style={{ 
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
+                alignItems: "center",
+                width: "100%",
+                marginBottom: "8px",
+              }}>
+                {/* Column 1: Mode Label + Active Games */}
+                <div style={{ 
+                  color: "rgb(255, 255, 255)",
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  display: "inline-block",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                  fontFamily: "'GohuFontuni11NerdFont', monospace",
+                }}>
+                  Active Games
+                </div>
+                
+                {/* Empty spaces for other columns */}
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+              </div>
+              
               {games.map((game) => (
                 <div key={game.id} style={{
-                  backgroundColor: "#1A1E2A", // Dark blue-black background
                   color: "white",
                   borderRadius: "8px",
                   overflow: "hidden",
                   marginBottom: "16px",
                   width: "100%",
+                  background: "rgba(0, 0, 0, 0.5)", // Added semi-transparent black background
                 }}>
                   {/* Horizontal structure with 6 columns and action button */}
                   <div style={{ 
@@ -1021,6 +1187,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                   }}>
                     {/* Column 1: Mode */}
                     <div style={{ 
+                      color: "white",
                       padding: "16px",
                       borderRight: "1px solid #374151",
                     }}>
@@ -1034,7 +1201,12 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                       borderRight: "1px solid #374151",
                     }}>
                       <div style={{ color: "#9ca3af", marginBottom: "4px" }}>User</div>
-                      <div style={{ color: "#FFA500" }}>#{game.id.substring(0, 8)}</div>
+                      <div style={{ color: "#FFA500" }}>
+                        {usernames[game.player1_id] || 
+                          (user && game.player1_id === user.id ? 
+                            (user.username || "You") : 
+                            `Player-${game.player1_id.substring(0, 6)}`)}
+                      </div>
                     </div>
 
                     {/* Column 3: Time */}
@@ -1052,13 +1224,19 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                       borderRight: "1px solid #374151",
                     }}>
                       <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
-                      <div>₿ {game.wager_amount}</div>
+                      <div style={{ 
+                        display: "inline-block",
+                        color: "#f7931a",
+                      }}>
+                        {formatSatoshis(game.wager_amount)}
+                      </div>
                     </div>
 
                     {/* Column 5: Multiplier */}
                     <div style={{ 
                       padding: "16px",
                       borderRight: "1px solid #374151",
+                      color: "rgb(71, 255, 65)",
                     }}>
                       <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Multiplier</div>
                       <div>2x</div>
@@ -1090,6 +1268,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                             opacity: loading ? 0.5 : 1,
                             whiteSpace: "nowrap",
                             border: "none",
+                            fontFamily: "'GohuFontuni11NerdFont', monospace"
                           }}
                         >
                           Cancel Game
@@ -1107,6 +1286,7 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
                             opacity: loading ? 0.5 : 1,
                             whiteSpace: "nowrap",
                             border: "none",
+                            fontFamily: "'GohuFontuni11NerdFont', monospace"
                           }}
                         >
                           Join Game

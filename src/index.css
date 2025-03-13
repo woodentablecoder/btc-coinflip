@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font declaration for DepartureMonoNerdFont-Regular */
+/* Font declaration for GohuFontuni11NerdFont-Regular */
 @font-face {
-  font-family: "DepartureMonoNerdFont-Regular";
-  src: url("/fonts/DepartureMonoNerdFont-Regular.ttf") format("truetype");
+  font-family: "GohuFontuni11NerdFont";
+  src: url("/fonts/Gohu/GohuFontuni11NerdFont-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -13,16 +13,16 @@
 
 /* Dark mode theme */
 :root {
-  font-family: "DepartureMonoNerdFont-Regular", monospace;
+  font-family: "GohuFontuni11NerdFont", monospace;
   line-height: 1.5;
-  color: #e2e8f0;
+  color: #ffffff;
   color-scheme: dark;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-image: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
+  background-color: #000000;
   padding-top: 60px; /* Add padding to account for fixed navbar */
 }
 
@@ -32,14 +32,16 @@ button {
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
   border: 1px solid transparent;
+  font-family: "GohuFontuni11NerdFont", monospace;
 }
 
 input {
   padding: 0.5rem;
   border-radius: 0.25rem;
-  border: 1px solid #4b5563;
-  background-color: #1f2937;
-  color: #e2e8f0;
+  border: 1px solid #ffffff;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: "GohuFontuni11NerdFont", monospace;
 }
 
 /* Remove arrows/spinners from number inputs */
@@ -53,4 +55,9 @@ input::-webkit-inner-spin-button {
 /* For Firefox */
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* Also apply font to other form elements */
+select, textarea, button, a {
+  font-family: "GohuFontuni11NerdFont", monospace;
 }

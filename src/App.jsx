@@ -1,19 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation
 } from "react-router-dom";
 import supabase from "./supabase";
 import Header from "./components/Header";
 import Auth from "./components/Auth";
 import GameInterface from "./components/GameInterface";
+import CoinflipGame from "./components/CoinflipGame";
 import AdminDashboard from "./components/AdminDashboard";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import UserProfile from "./components/UserProfile";
 import CoinflipModal from "./components/modals/CoinflipModal";
 import DepositModal from "./components/modals/DepositModal";
 import WithdrawModal from "./components/modals/WithdrawModal";
+
+// Wrapper for route debugging
+const RouteDebugger = ({ children }) => {
+  const location = useLocation();
+  console.log("Current route:", location.pathname);
+  return children;
+};
 
 function App() {
   const [session, setSession] = useState(null);
@@ -26,6 +36,9 @@ function App() {
   const [gameWinner, setGameWinner] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeGameCheckInterval, setActiveGameCheckInterval] = useState(null);
+  const userInitializedRef = useRef(false); // Track if we've already initialized this user
+
+  console.log("App rendering, user:", user?.id, "session:", !!session);
 
   // Check for auth session on load
   useEffect(() => {
@@ -48,6 +61,12 @@ function App() {
   useEffect(() => {
     if (user) {
       const initializeUser = async () => {
+        // Skip initialization if we've already done it for this user ID
+        if (userInitializedRef.current === user.id) {
+          console.log("User already initialized, skipping:", user.id);
+          return;
+        }
+        
         setLoading(true);
         let retries = 3; // Allow a few retries
 
@@ -72,7 +91,7 @@ function App() {
             // Check if user exists in the users table
             const { data, error } = await supabase
               .from("users")
-              .select("id, balance")
+              .select("id, balance, username, avatar_url")
               .eq("id", user.id)
               .single();
 
@@ -93,6 +112,8 @@ function App() {
                     email: user.email,
                     btc_address: mockAddress, // Use generated address
                     balance: 0,
+                    username: null,
+                    avatar_url: null,
                   });
 
                 if (insertError) {
@@ -128,16 +149,37 @@ function App() {
                   newUser.id
                 );
                 setBalance(newUser.balance || 0);
+                
+                // Update user object with profile data
+                setUser(prev => ({
+                  ...prev,
+                  username: null,
+                  avatar_url: null
+                }));
+                
+                // Mark as initialized
+                userInitializedRef.current = user.id;
+                
                 break; // Success, exit the retry loop
               } else {
                 console.error("Error checking if user exists:", error);
                 throw error;
               }
             } else if (data) {
-              // User exists, set balance
-              console.log("User found in database:", data.id);
-              setBalance(data.balance || 0);
-              break; // Success, exit the retry loop
+              console.log("User found:", data);
+              setBalance(data.balance);
+              
+              // Update user object with profile data
+              setUser(prev => ({
+                ...prev,
+                username: data.username,
+                avatar_url: data.avatar_url
+              }));
+              
+              // Mark as initialized
+              userInitializedRef.current = user.id;
+              
+              break; // Exit the retry loop
             }
           } catch (error) {
             console.error("Error in user initialization:", error);
@@ -158,23 +200,44 @@ function App() {
 
       initializeUser();
 
-      // Subscribe to balance changes
-      const balanceSubscription = supabase
-        .channel(`public:users:id=eq.${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "users",
-            filter: `id=eq.${user.id}`,
-          },
-          fetchUserBalance
-        )
-        .subscribe();
+      // Subscribe to balance changes using a more robust approach
+      let balanceSubscription;
+      try {
+        console.log("Setting up balance subscription for user:", user.id);
+        balanceSubscription = supabase
+          .channel(`public:users:id=eq.${user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "users",
+              filter: `id=eq.${user.id}`,
+            },
+            (payload) => {
+              console.log("Balance update received:", payload);
+              fetchUserBalance();
+            }
+          )
+          .subscribe((status) => {
+            // Only log meaningful status changes - reduce noise
+            if (status !== "CLOSED") {
+              console.log(`Balance subscription status: ${status}`);
+            }
+          });
+      } catch (error) {
+        console.error("Error setting up balance subscription:", error);
+      }
 
       return () => {
-        supabase.removeChannel(balanceSubscription);
+        // Proper cleanup of subscription without excessive logging
+        if (balanceSubscription) {
+          try {
+            supabase.removeChannel(balanceSubscription);
+          } catch (error) {
+            console.error("Error removing channel:", error);
+          }
+        }
       };
     }
   }, [user]);
@@ -210,26 +273,6 @@ function App() {
     setBalance((prevBalance) => prevBalance - amount);
   };
 
-  // Open coinflip modal with game data - memoized to prevent dependency cycles
-  const handleOpenCoinflipModal = useCallback(
-    (game) => {
-      console.log("App: Opening coinflip modal for game:", {
-        gameId: game.id,
-        player1: game.player1_id,
-        player2: game.player2_id,
-        status: game.status,
-        currentUserId: user?.id,
-        isCreator: game.player1_id === user?.id,
-        isJoiner: game.player2_id === user?.id,
-      });
-
-      setCurrentGame(game);
-      setGameWinner(null);
-      setShowCoinflipModal(true);
-    },
-    [user]
-  );
-
   // Handle game completion
   const handleGameComplete = (completedGame) => {
     console.log("App: Game completed:", {
@@ -253,12 +296,44 @@ function App() {
     fetchUserBalance();
   };
 
+  // Open coinflip modal with game data - memoized to prevent dependency cycles
+  const handleOpenCoinflipModal = useCallback(
+    (game, winner = null) => {
+      console.log("App: Opening coinflip modal for game:", {
+        gameId: game.id,
+        player1: game.player1_id,
+        player2: game.player2_id,
+        status: game.status,
+        currentUserId: user?.id,
+        isCreator: game.player1_id === user?.id,
+        isJoiner: game.player2_id === user?.id,
+        winner: winner
+      });
+
+      setCurrentGame(game);
+      setGameWinner(winner);
+      setShowCoinflipModal(true);
+    },
+    [user]
+  );
+
   // Poll for active games involving the current user
   useEffect(() => {
     if (!user) return;
 
+    const lastCheckTimeRef = { current: 0 };
+
     // Function to check for active games
     const checkForActiveGames = async () => {
+      // Implement debouncing to prevent too frequent checks
+      const now = Date.now();
+      if (now - lastCheckTimeRef.current < 3000) {
+        console.log("Debouncing active games check - too frequent");
+        return;
+      }
+      
+      lastCheckTimeRef.current = now;
+      
       try {
         console.log("Checking for active games involving user...");
         const { data, error } = await supabase
@@ -277,7 +352,7 @@ function App() {
             (currentGame && currentGame.id !== data[0].id)
           ) {
             console.log("Opening coinflip modal for active game:", data[0].id);
-            handleOpenCoinflipModal(data[0]);
+            handleOpenCoinflipModal(data[0], data[0].winner_id);
           }
         }
       } catch (err) {
@@ -289,7 +364,7 @@ function App() {
     checkForActiveGames();
 
     // Set up an interval to check regularly
-    const intervalId = setInterval(checkForActiveGames, 2000);
+    const intervalId = setInterval(checkForActiveGames, 10000); // Increased to 10 seconds
 
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
@@ -310,82 +385,115 @@ function App() {
           onOpenWithdrawModal={() => setShowWithdrawModal(true)}
         />
 
-        <Routes>
-          <Route
-            path="/"
-            element={
-              !session ? (
-                <main
-                  style={{
-                    maxWidth: "1200px",
-                    margin: "0 auto",
-                    padding: "16px",
-                    paddingTop: "80px",
-                  }}
-                >
-                  <Auth />
-                </main>
-              ) : (
-                <main
-                  style={{
-                    maxWidth: "1200px",
-                    margin: "0 auto",
-                    padding: "16px",
-                    paddingTop: "80px",
-                  }}
-                >
-                  <GameInterface
-                    user={user}
-                    onGameComplete={handleGameComplete}
-                    onOpenCoinflipModal={handleOpenCoinflipModal}
-                  />
-                </main>
-              )
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedAdminRoute>
-                <main
-                  style={{
-                    maxWidth: "1200px",
-                    margin: "0 auto",
-                    padding: "16px",
-                    paddingTop: "80px",
-                  }}
-                >
+        <RouteDebugger>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                !session ? (
+                  <main
+                    style={{
+                      maxWidth: "1200px",
+                      margin: "0 auto",
+                      padding: "16px",
+                      paddingTop: "80px",
+                    }}
+                  >
+                    <Auth />
+                  </main>
+                ) : (
+                  <main
+                    style={{
+                      maxWidth: "1200px",
+                      margin: "0 auto",
+                      padding: "16px",
+                      paddingTop: "80px",
+                    }}
+                  >
+                    <GameInterface
+                      user={user}
+                      onGameComplete={handleGameComplete}
+                      onOpenCoinflipModal={handleOpenCoinflipModal}
+                    />
+                  </main>
+                )
+              }
+            />
+            <Route
+              path="/coinflip"
+              element={
+                !session ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <main
+                    style={{
+                      maxWidth: "1200px",
+                      margin: "0 auto",
+                      padding: "16px",
+                      paddingTop: "80px",
+                    }}
+                  >
+                    <CoinflipGame
+                      user={user}
+                      onGameComplete={handleGameComplete}
+                      onOpenCoinflipModal={handleOpenCoinflipModal}
+                    />
+                  </main>
+                )
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedAdminRoute user={user}>
                   <AdminDashboard />
-                </main>
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={user ? <UserProfile user={user} /> : <Navigate to="/" replace />}
+            />
+            {/* Catch-all route for debugging */}
+            <Route 
+              path="*" 
+              element={
+                <div style={{padding: "100px 20px"}}>
+                  <h1>404 - Route Not Found</h1>
+                  <p>The path "{window.location.pathname}" does not exist.</p>
+                </div>
+              } 
+            />
+          </Routes>
+        </RouteDebugger>
 
         {/* Modals */}
-        <CoinflipModal
-          isOpen={showCoinflipModal}
-          game={currentGame}
-          winner={gameWinner}
-          currentUserId={user?.id}
-          onClose={() => setShowCoinflipModal(false)}
-        />
-
-        <DepositModal
-          isOpen={showDepositModal}
-          userId={user?.id}
-          onClose={() => setShowDepositModal(false)}
-          onDeposit={handleDeposit}
-        />
-
-        <WithdrawModal
-          isOpen={showWithdrawModal}
-          userId={user?.id}
-          userBalance={balance}
-          onClose={() => setShowWithdrawModal(false)}
-          onWithdraw={handleWithdraw}
-        />
+        {showDepositModal && (
+          <DepositModal
+            isOpen={showDepositModal}
+            onClose={() => setShowDepositModal(false)}
+            onDeposit={handleDeposit}
+            user={user}
+          />
+        )}
+        {showWithdrawModal && (
+          <WithdrawModal
+            isOpen={showWithdrawModal}
+            onClose={() => setShowWithdrawModal(false)}
+            onWithdraw={handleWithdraw}
+            user={user}
+            balance={balance}
+          />
+        )}
+        {showCoinflipModal && (
+          <CoinflipModal
+            isOpen={showCoinflipModal}
+            onClose={() => setShowCoinflipModal(false)}
+            game={currentGame}
+            winner={gameWinner}
+            currentUserId={user?.id}
+          />
+        )}
       </div>
     </Router>
   );

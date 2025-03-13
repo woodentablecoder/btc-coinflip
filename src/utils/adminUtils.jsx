@@ -13,7 +13,13 @@ export const isAdmin = async () => {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) return false;
+    if (!session || !session.user) {
+      console.log("No active session found during admin check");
+      return false;
+    }
+
+    // Add a debug log
+    console.log("Checking admin role for user:", session.user.id);
 
     // Query the user_roles table to check if user has admin role
     const { data, error } = await supabase
@@ -23,11 +29,23 @@ export const isAdmin = async () => {
       .single();
 
     if (error) {
+      // Check for specific cases where the user might not have a role yet
+      if (error.code === 'PGRST116') {
+        console.log("User has no role assigned yet (not found)");
+        return false;
+      }
       console.error("Error checking admin role:", error);
       return false;
     }
 
-    return data?.role === "admin";
+    if (!data) {
+      console.log("No role data found for user");
+      return false;
+    }
+
+    const isUserAdmin = data.role === "admin";
+    console.log("User admin role check result:", isUserAdmin);
+    return isUserAdmin;
   } catch (error) {
     console.error("Error in admin check:", error);
     return false;
