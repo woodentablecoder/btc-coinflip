@@ -1049,18 +1049,27 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      padding: "20px",
-      backgroundColor: "transparent", // Changed from "#EEF1F4" to transparent
+      padding: "0 20px 20px 20px",
+      backgroundColor: "transparent",
+      marginTop: "0",
     }}>
       <div style={{ 
         width: "100%", 
         maxWidth: "1200px", // Maximum width for very large screens
         display: "flex",
         flexDirection: "column",
-        alignItems: "center"
+        alignItems: "center",
+        marginTop: "0",
+        paddingTop: "0",
       }}>
         <h1
-          style={{ fontSize: "32px", marginBottom: "16px", color: "#FFA500" }}
+          style={{ 
+            fontSize: "32px", 
+            marginTop: "0", 
+            marginBottom: "16px", 
+            color: "#FFA500",
+            paddingTop: "5px", // Minimal padding to prevent text from touching the top edge
+          }}
         >
           Bitcoin Coinflip
         </h1>
@@ -1150,187 +1159,201 @@ const GameInterface = ({ user, onGameComplete, onOpenCoinflipModal }) => {
           Create Game
         </button>
 
-        {/* Games List */}
+        {/* Games List - Updated for responsive positioning with sidebar consideration */}
         <div style={{ 
           marginTop: "32px", 
           width: "100%",
-          marginLeft: "150px", // Added 150px margin to move the section right
+          paddingLeft: "240px", // Increased left padding to account for even narrower sidebar
+          paddingRight: "20px", // Add right padding for balance
+          boxSizing: "border-box",
         }}>
-          {games.length === 0 ? (
-            <div>
-              <div style={{ 
-                textAlign: "left", 
-                marginBottom: "16px",
-                color: "#FFA500",
-                padding: "8px 16px",
-                borderRadius: "4px",
-                display: "inline-block",
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                fontFamily: "'GohuFontuni11NerdFont', monospace",
-              }}>
-                Active Games
-              </div>
-              <p style={{ color: "#ffffff", textAlign: "center", textShadow: "0 0 4px rgba(0,0,0,0.7)", marginTop: "16px" }}>No active games. Create one!</p>
-            </div>
-          ) : (
-            <div style={{ width: "100%" }}>
-              <div style={{ 
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
-                alignItems: "center",
+          <div style={{
+            width: "100%",
+            maxWidth: "1200px", // Increased max width to use additional available space
+            marginLeft: "auto", // These auto margins will push the content right
+            marginRight: "auto", // while maintaining equal spacing on both sides after sidebar
+          }}>
+            {games.length === 0 ? (
+              <div style={{
                 width: "100%",
-                marginBottom: "8px",
               }}>
-                {/* Column 1: Mode Label + Active Games */}
                 <div style={{ 
-                  color: "rgb(255, 255, 255)",
+                  textAlign: "left", 
+                  marginBottom: "16px",
+                  color: "#FFA500",
                   padding: "8px 16px",
                   borderRadius: "4px",
                   display: "inline-block",
                   backgroundColor: "rgba(0, 0, 0, 0.5)",
                   fontFamily: "'GohuFontuni11NerdFont', monospace",
+                  gridColumn: "1",
                 }}>
                   Active Games
                 </div>
-                
-                {/* Empty spaces for other columns */}
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
+                <p style={{ color: "#ffffff", textAlign: "center", textShadow: "0 0 4px rgba(0,0,0,0.7)", marginTop: "16px" }}>No active games. Create one!</p>
               </div>
-              
-              {games.map((game) => (
-                <div key={game.id} style={{
-                  color: "white",
-                  borderRadius: "8px",
-                  overflow: "hidden",
-                  marginBottom: "16px",
+            ) : (
+              <div style={{ width: "100%" }}>
+                <div style={{ 
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
+                  alignItems: "center",
                   width: "100%",
-                  background: "rgba(0, 0, 0, 0.5)", // Added semi-transparent black background
+                  marginBottom: "8px",
                 }}>
-                  {/* Horizontal structure with 6 columns and action button */}
+                  {/* Column 1: Mode Label + Active Games */}
                   <div style={{ 
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
-                    alignItems: "center",
-                    width: "100%",
+                    color: "rgb(255, 255, 255)",
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    display: "inline-block",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    fontFamily: "'GohuFontuni11NerdFont', monospace",
+                    gridColumn: "1",
+                    marginBottom: "0",
                   }}>
-                    {/* Column 1: Mode */}
+                    Active Games
+                  </div>
+                  
+                  {/* Empty spaces for other columns */}
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+                
+                {games.map((game) => (
+                  <div key={game.id} style={{
+                    color: "white",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    marginBottom: "16px",
+                    width: "100%",
+                    background: "rgba(0, 0, 0, 0.5)", // Added semi-transparent black background
+                  }}>
+                    {/* Horizontal structure with 6 columns and action button */}
                     <div style={{ 
-                      color: "white",
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr auto",
+                      alignItems: "center",
+                      width: "100%",
                     }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Mode</div>
-                      <div>Coinflip</div>
-                    </div>
-
-                    {/* Column 2: User */}
-                    <div style={{ 
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
-                    }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>User</div>
-                      <div style={{ color: "#FFA500" }}>
-                        {usernames[game.player1_id] || 
-                          (user && game.player1_id === user.id ? 
-                            (user.username || "You") : 
-                            `Player-${game.player1_id.substring(0, 6)}`)}
-                      </div>
-                    </div>
-
-                    {/* Column 3: Time */}
-                    <div style={{ 
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
-                    }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Time</div>
-                      <div>{new Date(game.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</div>
-                    </div>
-
-                    {/* Column 4: Team (was previously Column 6) */}
-                    <div style={{ 
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
-                    }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Team</div>
-                      <div>{game.id.charCodeAt(0) % 2 === 0 ? "Heads" : "Tails"}</div>
-                    </div>
-
-                    {/* Column 5: Multiplier */}
-                    <div style={{ 
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
-                      color: "rgb(71, 255, 65)",
-                    }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Multiplier</div>
-                      <div>2x</div>
-                    </div>
-
-                    {/* Column 6: Value (was previously Column 4) */}
-                    <div style={{ 
-                      padding: "16px",
-                      borderRight: "1px solid #374151",
-                    }}>
-                      <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
+                      {/* Column 1: Mode */}
                       <div style={{ 
-                        display: "inline-block",
-                        color: "#f7931a",
+                        color: "white",
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
                       }}>
-                        {formatSatoshis(game.wager_amount)}
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Mode</div>
+                        <div>Coinflip</div>
                       </div>
-                    </div>
 
-                    {/* Action button */}
-                    <div style={{ 
-                      padding: "16px",
-                    }}>
-                      {game.player1_id === user?.id ? (
-                        <button
-                          onClick={() => cancelGame(game.id)}
-                          disabled={loading}
-                          style={{
-                            backgroundColor: "#ef4444",
-                            color: "white",
-                            borderRadius: "4px",
-                            padding: "8px 16px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            opacity: loading ? 0.5 : 1,
-                            whiteSpace: "nowrap",
-                            border: "none",
-                            fontFamily: "'GohuFont14NerdFont', monospace"
-                          }}
-                        >
-                          Cancel Game
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => joinGame(game.id)}
-                          disabled={loading}
-                          style={{
-                            backgroundColor: "#10b981",
-                            color: "white",
-                            borderRadius: "4px",
-                            padding: "8px 16px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            opacity: loading ? 0.5 : 1,
-                            whiteSpace: "nowrap",
-                            border: "none",
-                            fontFamily: "'GohuFontuni11NerdFont', monospace"
-                          }}
-                        >
-                          Join Game
-                        </button>
-                      )}
+                      {/* Column 2: User */}
+                      <div style={{ 
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
+                      }}>
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>User</div>
+                        <div style={{ color: "#FFA500" }}>
+                          {usernames[game.player1_id] || 
+                            (user && game.player1_id === user.id ? 
+                              (user.username || "You") : 
+                              `Player-${game.player1_id.substring(0, 6)}`)}
+                        </div>
+                      </div>
+
+                      {/* Column 3: Time */}
+                      <div style={{ 
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
+                      }}>
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Time</div>
+                        <div>{new Date(game.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</div>
+                      </div>
+
+                      {/* Column 4: Team (was previously Column 6) */}
+                      <div style={{ 
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
+                      }}>
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Team</div>
+                        <div>{game.id.charCodeAt(0) % 2 === 0 ? "Heads" : "Tails"}</div>
+                      </div>
+
+                      {/* Column 5: Multiplier */}
+                      <div style={{ 
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
+                        color: "rgb(71, 255, 65)",
+                      }}>
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Multiplier</div>
+                        <div>2x</div>
+                      </div>
+
+                      {/* Column 6: Value (was previously Column 4) */}
+                      <div style={{ 
+                        padding: "16px",
+                        borderRight: "1px solid #374151",
+                      }}>
+                        <div style={{ color: "#9ca3af", marginBottom: "4px" }}>Value</div>
+                        <div style={{ 
+                          display: "inline-block",
+                          color: "#f7931a",
+                        }}>
+                          {formatSatoshis(game.wager_amount)}
+                        </div>
+                      </div>
+
+                      {/* Action button */}
+                      <div style={{ 
+                        padding: "16px",
+                      }}>
+                        {game.player1_id === user?.id ? (
+                          <button
+                            onClick={() => cancelGame(game.id)}
+                            disabled={loading}
+                            style={{
+                              backgroundColor: "#ef4444",
+                              color: "white",
+                              borderRadius: "4px",
+                              padding: "8px 16px",
+                              cursor: loading ? "not-allowed" : "pointer",
+                              opacity: loading ? 0.5 : 1,
+                              whiteSpace: "nowrap",
+                              border: "none",
+                              fontFamily: "'GohuFont14NerdFont', monospace"
+                            }}
+                          >
+                            Cancel Game
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => joinGame(game.id)}
+                            disabled={loading}
+                            style={{
+                              backgroundColor: "#10b981",
+                              color: "white",
+                              borderRadius: "4px",
+                              padding: "8px 16px",
+                              cursor: loading ? "not-allowed" : "pointer",
+                              opacity: loading ? 0.5 : 1,
+                              whiteSpace: "nowrap",
+                              border: "none",
+                              fontFamily: "'GohuFontuni11NerdFont', monospace"
+                            }}
+                          >
+                            Join Game
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -7,8 +7,13 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(
+    parseInt(localStorage.getItem('sidebarWidth')) || 300
+  );
+  const [isResizing, setIsResizing] = useState(false);
   const userMenuRef = useRef(null);
   const adminCheckAttempts = useRef(0);
+  const sidebarRef = useRef(null);
   const navigate = useNavigate();
 
   console.log("Header rendering, user:", user?.id);
@@ -77,7 +82,7 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
   // Check window size and collapse sidebar accordingly
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 1500) {
+      if (window.innerWidth < 1850) {
         setSidebarCollapsed(true);
       } else {
         setSidebarCollapsed(false);
@@ -93,6 +98,47 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
     // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Sidebar resize functionality
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      
+      // Calculate new width with boundaries (min 200px, max 500px)
+      const newWidth = Math.max(350, Math.min(500, e.clientX));
+      
+      setSidebarWidth(newWidth);
+      localStorage.setItem('sidebarWidth', newWidth.toString());
+      
+      // Visual indicator while resizing
+      if (sidebarRef.current) {
+        sidebarRef.current.style.boxShadow = "0 0 15px rgba(247, 147, 26, 0.5)";
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+      
+      // Reset shadow when done resizing
+      if (sidebarRef.current) {
+        sidebarRef.current.style.boxShadow = "0 0 10px rgba(0, 0, 0, 0.5)";
+      }
+    };
+    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, sidebarRef]);
 
   const formatBalance = (balanceInSatoshis) => {
     // Format the balance with space separators as per spec
@@ -115,6 +161,11 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
   // Toggle sidebar function
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
+    // If expanding the sidebar, load the stored width from localStorage
+    if (sidebarCollapsed) {
+      const storedWidth = parseInt(localStorage.getItem('sidebarWidth')) || 300;
+      setSidebarWidth(storedWidth);
+    }
   };
 
   // Base font style to apply throughout the navbar
@@ -400,15 +451,16 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
 
       {/* Sidebar */}
       <div
+        ref={sidebarRef}
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          width: sidebarCollapsed ? "60px" : "300px",
+          width: sidebarCollapsed ? "60px" : `${sidebarWidth}px`,
           height: "100vh",
           backgroundColor: "rgba(17, 17, 23, 0.95)",
           color: "white",
-          transition: "width 0.3s ease",
+          transition: isResizing ? "none" : "width 0.3s ease",
           zIndex: 1000,
           boxShadow: "0 0 10px rgba(0, 0, 0, 0.5)",
           overflow: "hidden",
@@ -655,13 +707,69 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
             </div>
           )}
         </div>
+
+        {/* Resizer handle - only visible when sidebar is expanded */}
+        {!sidebarCollapsed && (
+          <div 
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "6px",
+              cursor: "ew-resize",
+              zIndex: 1001,
+              backgroundColor: isResizing ? "rgba(247, 147, 26, 0.7)" : "transparent",
+              transition: "background-color 0.2s ease",
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizing(true);
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(247, 147, 26, 0.3)";
+            }}
+            onMouseOut={(e) => {
+              if (!isResizing) {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
+            }}
+          >
+            {/* Visual indicator dots */}
+            <div style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              height: "60px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}>
+              {[...Array(3)].map((_, i) => (
+                <div 
+                  key={i}
+                  style={{
+                    width: "3px",
+                    height: "3px",
+                    borderRadius: "50%",
+                    backgroundColor: "#F7931A",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content - adjusted to respect sidebar width and center content better */}
       <div style={{ 
-        marginLeft: sidebarCollapsed ? "60px" : "300px",
-        transition: "margin-left 0.3s ease",
-        width: sidebarCollapsed ? "calc(100% - 60px)" : "calc(100% - 300px)",
+        marginLeft: sidebarCollapsed ? "60px" : `${sidebarWidth}px`,
+        transition: isResizing ? "none" : "margin-left 0.3s ease",
+        width: sidebarCollapsed ? "calc(100% - 60px)" : `calc(100% - ${sidebarWidth}px)`,
+        paddingTop: "0", // Eliminate top padding
+        marginTop: "0", // Eliminate top margin
       }}>
         {/* Content container with adjusted padding/margins */}
         <div style={{
@@ -670,23 +778,16 @@ const Header = ({ user, balance, onOpenDepositModal, onOpenWithdrawModal }) => {
           maxWidth: "1600px", // Increased max width to allow content to expand more
           margin: "0 auto",   // Center the content container
           boxSizing: "border-box",
+          paddingTop: "0", // Eliminate top padding
+          marginTop: "0", // Eliminate top margin
         }}>
-          {/* Your existing main content */}
-          
           {/* Active Games section with expanded width */}
           <div style={{
-            marginTop: "40px",
+            marginTop: "0", // Removed top margin to eliminate empty space
             width: "100%",    // Take full width of the container
+            marginLeft: "150px", // Added left margin to align with game list
+            paddingTop: "0", // Eliminate top padding
           }}>
-            <h2 style={{ 
-              fontFamily: "'GohuFontuni11NerdFont', monospace",
-              fontSize: "16px",
-              marginBottom: "20px",
-              color: "#f8a100"
-            }}>
-              Active Games
-            </h2>
-            
             {/* Games table with expanded width */}
             <div style={{
               width: "100%",

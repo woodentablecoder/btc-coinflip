@@ -9,7 +9,7 @@
   background: linear-gradient(to bottom right, #0F2124, rgba(15, 33, 36, 0.31), rgba(63, 209, 69, 0));
   color: #FFFFFF;
   padding: 20px;
-  margin-top: 60px; /* Add margin to account for fixed header */
+  margin-top: 0; /* Removed top margin to eliminate space */
 }
 
 /* Error message */
